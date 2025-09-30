@@ -1,5 +1,69 @@
 10 requirements
 
+1. User Authentication and Account Management
+The system must allow users to create accounts, log in with unique credentials, reset passwords, and manage account states (New, Active, Blocked, Banned). This ensures secure and controlled access.
+
+2. Secure Betting and Fund Management
+Players must be able to deposit and withdraw funds, place bets only if sufficient balance exists, and have all transactions logged for audit. Bets must follow game rules (≥ $1, integer values, no decimals).
+
+3. Game Logic Enforcement
+The system must enforce Blackjack rules, including correct dealing, turn-taking, win/loss evaluation, busts, blackjack payout rules, and automated handling of timeouts (default to stand).
+
+4. Fairness via Randomized Shuffling
+Card shuffling must be implemented using a true random number generator. The system should simulate a multi-deck shoe and reshuffle at defined intervals to prevent cheating and card counting.
+
+5. Real-Time Network Communication
+The client-server system must ensure real-time updates for all players at a table, including bets, dealt cards, and game outcomes. Players who disconnect should lose their bets, while reconnection attempts must be supported.
+
+6. Dealer Controls
+Dealers must be able to open tables, invite players from the lobby, and deal cards. They cannot leave mid-game, ensuring stability. The dealer always acts after players to follow standard Blackjack rules.
+
+7. Table Management
+Each table must have exactly one dealer and 1–6 players. A unique ID must identify each table session. Tables should close automatically when no dealer is present or if no players join within a set time.
+
+8. User Interface (GUI)
+The system must provide an interactive GUI for both players and dealers. It should display real-time actions (bets, cards, results), include animations (shuffling, dealing, chips), and provide separate dashboards for players vs. dealers.
+
+9. Security and Anti-Cheating
+The system must implement secure authentication, prevent duplicate sessions per account, and include anti-cheating measures such as multiple decks and reshuffling to counter card counting.
+
+10. Performance and Scalability
+The system must support multiple concurrent tables, each with up to 6 players, while maintaining smooth real-time gameplay. It must handle disconnections gracefully to ensure the game flow is not disrupted.
+
+11. Session management and timeout handling
+Each player account must allow only one active session. If a player quits, times out, or disconnects, the system must immediately terminate in-game actions, free the seat, and forfeit bets as appropriate
+
 
 class candidates
 
+From UC01: Create Account
+Account – attributes: username, passwordHash, state (New, Active, Blocked, Banned).
+AccountManager – operations: createAccount(), validateUsername(), resetPassword().
+AuthenticationService – handles credential validation and login.
+
+From UC02: Login
+Session – attributes: sessionId, expiryTime, playerId.
+Player – attributes: account, wallet, history.
+SystemGUI (or LoginScreen) – presents login prompts and messages.
+
+From UC03: Place Bet
+Bet – attributes: betAmount, isValid, status (Pending, Won, Lost).
+Wallet – operations: deductFunds(), addFunds(), getBalance().
+Table – tracks active bets, enforces table limits.
+
+From UC04: Play Hand
+Card – attributes: rank, suit, value.
+Deck – operations: shuffle(), dealCard().
+Hand – operations: addCard(), getValue(), isBust().
+GameRound – manages state transitions (betting → dealing → actions → results).
+GameLogic – enforces blackjack rules, determines winners.
+
+From UC05: Cash Out
+Transaction – attributes: transactionId, amount, type (Withdrawal/Deposit).
+Wallet – operations: withdraw(), deposit().
+PaymentProcessor (optional) – handles queued payouts if unavailable.
+
+From UC06: Dealer Manage Table
+Dealer (inherits from Player) – operations: dealCards(), manageSeating(), invitePlayers().
+Lobby – operations: showTables(), invitePlayer().
+Table – attributes: tableId, seats, activeDealer, activePlayers.
