@@ -1,0 +1,20 @@
+
+
+public enum MessageType {
+    REGISTER,
+    LOGIN,
+    LOGOUT,
+    GAME_UPDATE,
+    ERROR,
+    OK,
+    BET_PLACED,
+    DEAL_CARDS,
+    RESULT,
+    DEPOSIT,
+    WITHDRAW,
+    PLAYER_ACTION,
+    JOIN_TABLE,
+    LEAVE_TABLE,
+    REQUEST_PROFILE,
+    DEALER_ACTION
+}
