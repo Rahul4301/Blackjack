@@ -1,3 +1,7 @@
+package Server;
+
+import enums.MessageType;
+
 public class Client {
     private String clientID;
 

@@ -1,3 +1,4 @@
+package Server;
 public class Bet {
     private double amount;
     private double payoutMultiplier;
@@ -22,29 +23,18 @@ public class Bet {
         this.outcome = result; 
         this.settled = true; 
 
-        switch(result) {
-            case "BLACKJACK":
-                this.payoutMultiplier = 2.5;
-                break;
-            case "WIN":
-                this.payoutMultiplier = 2.0;
-            break;
-            case "PUSH":
-                this.payoutMultiplier = 1.0;
-            break;
-            case "LOSE": 
-                this.payoutMultiplier = 0.0;
-            break;
-            default:
-                this.payoutMultiplier = 1.0;
-        }
+        double payout = calculatePayout();
+        player.updateBalance(payout);
     }
 
     public double calculatePayout() {
-       if (!settled) {
-        return 0.0;
-       }
-       return amount * payoutMultiplier;
+        switch(outcome) {
+            case "BLACKJACK": return amount * 1.5;
+            case "WIN": return amount;
+            case "PUSH": return 0; 
+            case "LOSE": return -amount;
+            default: return 0;
+        }
     }
 
     // getters

@@ -1,3 +1,4 @@
+package Client;
 public class GUI {
     private String currentScreen;
 

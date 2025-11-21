@@ -1,4 +1,4 @@
-
+package Server;
 
 import enums.Rank;
 import enums.Suit;
