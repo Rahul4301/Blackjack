@@ -4,7 +4,7 @@ import enums.AccState;
 abstract class Account {
     protected String username, password;
     protected boolean sessionActive;
-    protected AccState accState;
+    protected AccState accountState;
 
     public boolean login(){
         return true;
