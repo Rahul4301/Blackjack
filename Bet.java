@@ -22,18 +22,29 @@ public class Bet {
         this.outcome = result; 
         this.settled = true; 
 
-        double payout = calculatePayout();
-        player.updateBalance(payout);
+        switch(result) {
+            case "BLACKJACK":
+                this.payoutMultiplier = 2.5;
+                break;
+            case "WIN":
+                this.payoutMultiplier = 2.0;
+            break;
+            case "PUSH":
+                this.payoutMultiplier = 1.0;
+            break;
+            case "LOSE": 
+                this.payoutMultiplier = 0.0;
+            break;
+            default:
+                this.payoutMultiplier = 1.0;
+        }
     }
 
     public double calculatePayout() {
-        switch(outcome) {
-            case "BLACKJACK": return amount * 1.5;
-            case "WIN": return amount;
-            case "PUSH": return 0; 
-            case "LOSE": return -amount;
-            default: return 0;
-        }
+       if (!settled) {
+        return 0.0;
+       }
+       return amount * payoutMultiplier;
     }
 
     // getters
