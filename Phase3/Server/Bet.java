@@ -1,9 +1,11 @@
 package Server;
+import enums.BetStatus;
+
 public class Bet {
     private double amount;
     private double payoutMultiplier;
     private boolean settled;
-    private String outcome;
+    private BetStatus outcome;
     private Player player;
 
     public Bet(Player player, double amount) {
@@ -11,15 +13,21 @@ public class Bet {
         this.amount = amount;
         this.payoutMultiplier = 1.0;
         this.settled = false;
-        this.outcome = "PENDING";
+        this.outcome = BetStatus.PENDING;
+    }
+
+     public Bet(double amount) {
+        this.amount = amount;
+        this.payoutMultiplier = 1.0;
+        this.settled = false;
+        this.outcome = BetStatus.PENDING;
     }
 
     public boolean validateBet() {
         return player != null && amount > 0 && amount <= player.getBalance();
-
     }
 
-    public void settle(String result) {
+    public void settle(BetStatus result) {
         this.outcome = result; 
         this.settled = true; 
 
@@ -29,10 +37,10 @@ public class Bet {
 
     public double calculatePayout() {
         switch(outcome) {
-            case "BLACKJACK": return amount * 1.5;
-            case "WIN": return amount;
-            case "PUSH": return 0; 
-            case "LOSE": return -amount;
+            case BLACKJACK: return amount * 1.5;
+            case WIN: return amount;
+            case PUSH: return 0; 
+            case LOSE: return -amount;
             default: return 0;
         }
     }
@@ -46,7 +54,7 @@ public class Bet {
         return settled;
     }
 
-    public String getOutcome() {
+    public BetStatus getOutcome() {
         return outcome;
     }
 

@@ -6,7 +6,7 @@ public class Player extends Account{
     private double balance;
     private String sessionID;
     private Hand hand;
-    //Bet activeBet;  TODO: Make Bet class
+    Bet activeBet;
 
     public Player(String username, String password, double balance){
         this.username = username;
@@ -15,13 +15,15 @@ public class Player extends Account{
         sessionID = null;
         hand = null;
         accountState = AccState.ACTIVE;
-        //Bet activeBet = null;
+        Bet activeBet = null;
     }
 
-    public boolean placeBet(double amt){
-        //TODO: Create placeBet
-        return true; //return true if bet recieved by table
+    public Bet placeBet(double amt){
+        activeBet = new Bet(amt);
+        return
     }
+
+    
 
     public void hit(Card card){
         hand.addCard(card);
