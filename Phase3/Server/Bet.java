@@ -17,10 +17,13 @@ public class Bet {
     }
 
      public Bet(double amount) {
+        if(!validateBet()){
+            throw new IllegalArgumentException("Invalid bet amount");
+        }
         this.amount = amount;
-        this.payoutMultiplier = 1.0;
-        this.settled = false;
-        this.outcome = BetStatus.PENDING;
+            this.payoutMultiplier = 1.0;
+            this.settled = false;
+            this.outcome = BetStatus.PENDING;
     }
 
     public boolean validateBet() {

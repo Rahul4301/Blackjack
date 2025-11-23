@@ -20,7 +20,7 @@ public class Player extends Account{
 
     public Bet placeBet(double amt){
         activeBet = new Bet(amt);
-        return
+        return activeBet;
     }
 
     
