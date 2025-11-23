@@ -17,7 +17,7 @@ public class Dealer extends Account {
         hand = null;
         //currentTable = null;
         sessionActive = false;
-        accState = AccState.ACTIVE;
+        accountState = AccState.ACTIVE;
     }
 
     // public void prepareRound(GameTable table){

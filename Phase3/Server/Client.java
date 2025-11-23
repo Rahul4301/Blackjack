@@ -1,6 +1,7 @@
 package Server;
 
 import enums.MessageType;
+import Message.Message;
 
 public class Client {
     private String clientID;
@@ -17,7 +18,7 @@ public class Client {
     public void sendMessage(Message msg) {
         System.out.println("Sending: " + msg.getMessageType());
     }
-    public void recieveMessage() {
+    public Message recieveMessage() {
         return new Message("RESP_001", MessageType.OK, "Server", clientID, null, java.time.LocalDateTime.now());
     }
     public void disconnect() {

@@ -14,7 +14,7 @@ public class Player extends Account{
         this.balance = balance;
         sessionID = null;
         hand = null;
-        accState = AccState.ACTIVE;
+        accountState = AccState.ACTIVE;
         //Bet activeBet = null;
     }
 
