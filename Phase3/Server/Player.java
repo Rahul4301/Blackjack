@@ -3,6 +3,9 @@ package Server;
 import enums.AccState;
 
 public class Player extends Account{
+    private static int count;
+
+    private String ID;
     private double balance;
     private String sessionID;
     private Hand hand;
@@ -12,6 +15,7 @@ public class Player extends Account{
         this.username = username;
         this.password = password;
         this.balance = balance;
+        this.ID = ("P" + ++count);
         sessionID = null;
         hand = null;
         accountState = AccState.ACTIVE;
@@ -56,12 +60,23 @@ public class Player extends Account{
     }
 
     public int getHandValue(){
-        //Evaluate hand value 
-        return 0;
+        return hand.getValue();
+    }
+
+    public Hand getHand(){
+        return hand;
+    }
+
+    public Bet getBet(){
+        return activeBet;
     }
 
     public String getUsername(){
         return username;
+    }
+
+    public String getID(){
+        return ID;
     }
 
     public static void main(String[] args) {
