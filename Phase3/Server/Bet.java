@@ -14,16 +14,11 @@ public class Bet {
         this.payoutMultiplier = 1.0;
         this.settled = false;
         this.outcome = BetStatus.PENDING;
-    }
-
-     public Bet(double amount) {
-        if(!validateBet()){
+        
+         if(!validateBet()){
             throw new IllegalArgumentException("Invalid bet amount");
+
         }
-        this.amount = amount;
-            this.payoutMultiplier = 1.0;
-            this.settled = false;
-            this.outcome = BetStatus.PENDING;
     }
 
     public boolean validateBet() {
@@ -66,7 +61,12 @@ public class Bet {
     }
 
 
+    //Testing purposes
+    @Override
+    public String toString(){
+        return (player.getUsername() + " placed a bet: " + amount);
 
+    }
 
 
 }

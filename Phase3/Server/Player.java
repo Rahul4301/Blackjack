@@ -6,7 +6,7 @@ public class Player extends Account{
     private double balance;
     private String sessionID;
     private Hand hand;
-    Bet activeBet;
+    private Bet activeBet;
 
     public Player(String username, String password, double balance){
         this.username = username;
@@ -15,11 +15,11 @@ public class Player extends Account{
         sessionID = null;
         hand = null;
         accountState = AccState.ACTIVE;
-        Bet activeBet = null;
+        this.activeBet = null;
     }
 
     public Bet placeBet(double amt){
-        activeBet = new Bet(amt);
+        activeBet = new Bet(this, amt);
         return activeBet;
     }
 
@@ -58,5 +58,14 @@ public class Player extends Account{
     public int getHandValue(){
         //Evaluate hand value 
         return 0;
+    }
+
+    public String getUsername(){
+        return username;
+    }
+
+    public static void main(String[] args) {
+        Player player = new Player ("sam", "sam", 500);
+        System.out.print(player.placeBet(50).toString());
     }
 }
