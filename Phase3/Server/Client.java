@@ -19,7 +19,7 @@ public class Client {
         System.out.println("Sending: " + msg.getMessageType());
     }
     public Message recieveMessage() {
-        return new Message("RESP_001", MessageType.OK, "Server", clientID, null, java.time.LocalDateTime.now());
+        return new Message(MessageType.OK, "Server", clientID, null, java.time.LocalDateTime.now());
     }
     public void disconnect() {
         System.out.println("Disconnected");

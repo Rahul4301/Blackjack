@@ -8,6 +8,7 @@ import enums.MessageType;
  */
 public class Message implements Serializable {
     private static final long serialVersionUID = 1L;
+    private static int count;
 
     private final String messageID;
     private final MessageType messageType;
@@ -16,8 +17,8 @@ public class Message implements Serializable {
     private final Object payload;
     private final LocalDateTime timestamp;
 
-    public Message(String messageID, MessageType messageType, String sender, String recipient, Object payload, LocalDateTime timestamp) {
-        this.messageID = messageID;
+    public Message(MessageType messageType, String sender, String recipient, Object payload, LocalDateTime timestamp) {
+        this.messageID = "M" + ++count;
         this.messageType = messageType;
         this.sender = sender;
         this.recipient = recipient;

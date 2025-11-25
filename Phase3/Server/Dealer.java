@@ -7,7 +7,7 @@ public class Dealer extends Account {
     private static int count;
 
     private String dealerID;
-    //GameTable currentTable;
+    private GameTable currentTable;
     private Hand hand;
 
     public Dealer(String username, String password){
@@ -47,13 +47,22 @@ public class Dealer extends Account {
     //     return;
     // }
 
-     public int getHandValue(){
-        return hand.getValue();
+    public String getID(){
+        return dealerID;
     }
-    
+
+    public GameTable getTable(){
+        return currentTable;
+    }
+
     public Hand getHand(){
         return hand;
     }
+
+       public int getHandValue(){
+        return hand.getValue();
+    }
+    
 
     public boolean mustHit(int total, boolean soft){
         boolean flag = false;
