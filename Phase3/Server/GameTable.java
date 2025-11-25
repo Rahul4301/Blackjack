@@ -1,8 +1,8 @@
 package Server;
 
+import Enums.BetStatus;
+import Enums.GameState;
 import java.util.ArrayList;
-import enums.GameState;
-import enums.BetStatus;
 
 public class GameTable {
     private static int count;

@@ -1,6 +1,6 @@
 package Server;
 
-import enums.AccState;
+import Enums.AccState;
 
 public class Player extends Account{
     private static int count;

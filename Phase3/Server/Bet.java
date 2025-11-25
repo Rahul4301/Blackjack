@@ -1,5 +1,5 @@
 package Server;
-import enums.BetStatus;
+import Enums.BetStatus;
 
 public class Bet {
     private double amount;

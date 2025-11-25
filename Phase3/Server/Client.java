@@ -1,6 +1,6 @@
 package Server;
 
-import enums.MessageType;
+import Enums.MessageType;
 import Message.Message;
 
 public class Client {

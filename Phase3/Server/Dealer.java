@@ -1,7 +1,7 @@
 package Server;
 
-import enums.AccState;
-import enums.HandEval;
+import Enums.AccState;
+import Enums.HandEval;
 
 public class Dealer extends Account {
     private static int count;
