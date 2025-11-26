@@ -119,6 +119,8 @@ public class ClientHandler implements Runnable {
             this.account = authenticatedAccount;
             sendMessage(createOKResponse(msg, "Login successful"));
             System.out.println("[Server] User " + username + " logged in.");
+            // Log login event
+            UserLogger.log(username, "LOGIN");
         } else {
             sendMessage(createErrorResponse(msg, "Invalid credentials or account not active"));
         }
@@ -131,6 +133,8 @@ public class ClientHandler implements Runnable {
         if (account != null) {
             server.getLoginManager().logout(account);
             System.out.println("[Server] User " + account.getUsername() + " logged out.");
+            // Log logout event
+            UserLogger.log(account.getUsername(), "LOGOUT");
             account = null;
             sendMessage(createOKResponse(msg, "Logout successful"));
         } else {
