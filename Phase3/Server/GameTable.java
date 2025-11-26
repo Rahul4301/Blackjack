@@ -1,8 +1,8 @@
 package Server;
 
-import java.util.ArrayList;
-import enums.GameState;
 import enums.BetStatus;
+import enums.GameState;
+import java.util.ArrayList;
 
 public class GameTable {
     private static int count;
@@ -33,7 +33,7 @@ public class GameTable {
 
     public void removePlayer(Player person){
         for(Player player : players){
-            if(player.getID().equals(person.getID())){
+            if(player.getID().equalsIgnoreCase(person.getID())){
                 players.remove(person);
             }
         }

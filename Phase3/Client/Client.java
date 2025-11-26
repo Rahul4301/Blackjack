@@ -3,7 +3,6 @@ package Client;
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
-import Message.Message;
 
 public class Client {
     public static void main(String[] args){
@@ -18,7 +17,7 @@ public class Client {
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
             ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream());
             System.out.print("\nConnection successful.\n");
-
+        
             
         } catch(IOException e) { //\ ClassNotFoundException e
         e.printStackTrace();

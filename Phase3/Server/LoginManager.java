@@ -3,8 +3,6 @@ package Server;
 import java.io.*;
 import java.util.ArrayList;
 import java.util.Scanner;
-import Server.Account;
-import Server.Player;
 
 public class LoginManager {
     //final since we (the developers) determine where data should be stored, not user
@@ -13,7 +11,7 @@ public class LoginManager {
     private int numAccounts;
     private boolean modified;
 
-    //Saved file data convention: [username], [password], [accType]
+    //Saved file data convention: [username],[password],[accType]
 
     public LoginManager(){
         accounts = new ArrayList<>(64);
