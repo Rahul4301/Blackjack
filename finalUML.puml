@@ -64,7 +64,7 @@ enum MessageType {
 
 
 ' ========= Server Side (authoritative game logic) =========
-package "Server Side" {
+package "Server" {
   class Server {
     + start() : void
     + stop() : void
