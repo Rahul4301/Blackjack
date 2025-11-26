@@ -1,8 +1,6 @@
 package Server;
-
-import Message.Message;
 import Enums.MessageType;
-
+import Message.Message;
 import java.io.*;
 import java.net.Socket;
 import java.util.UUID;
