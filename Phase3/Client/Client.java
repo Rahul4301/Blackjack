@@ -1,7 +1,7 @@
 package Client;
 
+import Enums.MessageType;
 import Message.Message;
-import enums.MessageType;
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
@@ -26,15 +26,9 @@ public class Client {
         }
     } 
 
-    public Message login(){
-        Scanner scan = new Scanner(System.in);
-        System.out.print("\nEnter a username: ");
-        String username = scan.nextLine();
-        System.out.print("\nEnter a password: ");
-        String password = scan.nextLine();
-
+    public Message login(String username, String password){
         String userpw = (username + "," + password);
-        return new Message(MessageType.LOGIN,"CLIENT.ID", "SERVER", userpw, null); 
+        return new Message(MessageType.LOGIN,"CLIENT.ID", "SERVER", userpw); 
     }
 
 

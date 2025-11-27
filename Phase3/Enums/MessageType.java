@@ -1,5 +1,4 @@
-package enums;
-
+package Enums;
 
 public enum MessageType {
     REGISTER,
@@ -17,5 +16,6 @@ public enum MessageType {
     JOIN_TABLE,
     LEAVE_TABLE,
     REQUEST_PROFILE,
-    DEALER_ACTION
+    DEALER_ACTION,
 }
+

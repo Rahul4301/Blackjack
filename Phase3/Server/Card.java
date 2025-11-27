@@ -1,7 +1,7 @@
 package Server;
 
-import enums.Rank;
-import enums.Suit;
+import Enums.Rank;
+import Enums.Suit;
 
 /**
  * Simple Card skeleton.

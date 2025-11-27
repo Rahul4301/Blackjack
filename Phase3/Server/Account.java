@@ -1,5 +1,5 @@
 package Server;
-import enums.AccState;
+import Enums.AccState;
 
 abstract class Account {
     protected String username, password;

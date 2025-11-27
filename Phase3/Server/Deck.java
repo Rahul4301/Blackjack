@@ -1,9 +1,8 @@
 package Server;
 
 
-import enums.Rank;
-import enums.Suit;
-
+import Enums.Rank;
+import Enums.Suit;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.UUID;
