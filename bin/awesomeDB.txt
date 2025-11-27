@@ -1,0 +1,2 @@
+sam,sam,PLAYER
+mas,nas,DEALER
