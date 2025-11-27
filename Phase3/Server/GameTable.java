@@ -1,7 +1,7 @@
 package Server;
 
-import enums.BetStatus;
-import enums.GameState;
+import Enums.BetStatus;
+import Enums.GameState;
 import java.util.ArrayList;
 
 public class GameTable {

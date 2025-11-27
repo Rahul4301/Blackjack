@@ -1,8 +1,7 @@
 package Message;
 
-import enums.MessageType;
+import Enums.MessageType;
 import java.io.Serializable;
-import java.time.LocalDateTime;
 
 /**
  * Serializable messaging envelope used for client/server communication.
