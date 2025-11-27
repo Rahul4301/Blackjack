@@ -1,81 +1,135 @@
 package Server;
 
-import Enums.AccState;
-import java.util.HashMap;
-import java.util.Map;
+import java.io.*;
+import java.util.ArrayList;
+import java.util.Scanner;
 
-/**
- * Manages authentication and session lifecycle for accounts.
- */
 public class LoginManager {
-    private Map<String, Account> activeSessions;
+    //final since we (the developers) determine where data should be stored, not user
+    private final String sourceName;
+    private ArrayList<Account> accounts;
+    private int numAccounts;
+    private boolean modified;
 
-    public LoginManager() {
-        this.activeSessions = new HashMap<>();
+    //Saved file data convention: [username],[password],[accType]
+
+    public LoginManager(){
+        accounts = new ArrayList<>(64);
+        numAccounts = 0;
+        sourceName = "awesomeDB.txt";
+        modified = false;
     }
 
-    /**
-     * Authenticates a user by username and password.
-     * Returns the Account if credentials are valid and account is ACTIVE.
-     * Returns null if authentication fails or account is not ACTIVE.
-     */
-    public Account authenticate(String username, String password) {
-        if (username == null || password == null || username.isEmpty() || password.isEmpty()) {
+    public void loadData(){
+        File file = new File(sourceName);
+        System.out.println(file.getAbsolutePath());
+        try{
+            Scanner scan = new Scanner(file);
+            while(scan.hasNextLine()){
+                String line = scan.nextLine();
+                if(line.isEmpty()) {
+                    break;
+                }
+                String[] words = line.split(",");
+                if(words[2].equalsIgnoreCase("Player")){
+                    accounts.add(new Player(words[0], words[1], 1000));
+                } else if(words[2].equalsIgnoreCase("Dealer")){
+                    accounts.add(new Dealer(words[0], words[1]));
+                } else {
+                    throw new IllegalArgumentException("Invalid account type: " + words[2]);
+                }
+            }
+            scan.close();
+            numAccounts = accounts.size();
+            modified = false;
+        } catch(IOException | IllegalArgumentException e) {
+            e.printStackTrace();
+        }
+    }
+
+    //Save to file
+    public void save(){
+        try(FileWriter writer = new FileWriter(sourceName)){
+            for(Account account : accounts){
+                String type = getTypeString(account);
+                writer.write(account.username + "," + account.password + "," + type);
+                writer.write("\n");
+            }
+            modified = false;
+        } catch(IOException e) {
+            System.out.print("\nSave Error!\n");
+            e.printStackTrace();
+        }
+    }
+
+    //Create account and add to ArrayList accounts 
+    //Note: when using createAccount, surround it in "try - catch" block bc of exception throwing
+    public void createAccount(String username, String password, String type){
+        for (Account account : accounts){
+            if (account.username.equalsIgnoreCase(username)){
+                throw new IllegalArgumentException("Username already exists: " + username);
+            }
+        }
+
+        switch (type.toUpperCase()){
+            case "PLAYER":
+                accounts.add(new Player(username, password, 1000));
+                break;
+            case "DEALER":
+                accounts.add(new Dealer(username, password));
+                break;
+            default:
+                throw new IllegalArgumentException("Invalid type: " + type);
+        }
+        modified = true;
+    }
+
+    public Account login(String username, String password){
+        try {
+            for(Account account : accounts){
+                if (account.username.equals(username) && account.password.equals(password)){
+                    return account;
+                }
+            }
+            throw new IllegalArgumentException();
+        } catch (IllegalArgumentException e) {
+            System.out.print("\nInvalid username / password!\n");
             return null;
         }
-
-        // TODO: Query database or user store for account with this username
-        // For now, return null (placeholder for database integration)
-        Account account = getUserFromDatabase(username);
-
-        if (account == null) {
-            return null; // User not found
-        }
-
-        if (!account.getPassword().equals(password)) {
-            return null; // Password mismatch
-        }
-
-        if (account.getAccountState() != AccState.ACTIVE) {
-            return null; // Account is suspended or locked
-        }
-
-        // Set session active and track it
-        account.setSessionActive(true);
-        activeSessions.put(username, account);
-
-        return account;
     }
 
-    /**
-     * Logs out an account by clearing its session.
-     */
-    public void logout(Account account) {
-        if (account != null) {
-            account.setSessionActive(false);
-            activeSessions.remove(account.getUsername());
+    @Override
+    public String toString(){
+        String all = "";
+        for(Account account : accounts){
+            all += ("User: " + account.username +  " | Password: " + account.password + " | Type: " + getTypeString(account) + "\n");
+        }
+
+        return all;
+    }
+
+    //Helper
+    private String getTypeString(Account a) {
+        if (a instanceof Player) {
+            return "PLAYER";
+        } else if (a instanceof Dealer) {
+            return "DEALER";
+        } else {
+            return "UNKNOWN";
         }
     }
 
-    /**
-     * Placeholder for database lookup. Replace with actual DB query.
-     */
-    private Account getUserFromDatabase(String username) {
-        // TODO: Implement database lookup
-        return null;
-    }
-
-    /**
-     * Check if an account has an active session.
-     */
-    public boolean isSessionActive(String username) {
-        return activeSessions.containsKey(username);
-    }
-
-    /**
-     * Get active sessions count (for monitoring).
-     */
-    public int getActiveSessionCount() {
-        return activeSessions.size();
+    //Driver
+    public static void main(String[] args) {
+        LoginManager manager = new LoginManager();
+        manager.loadData();
+        System.out.println("Before: \n" + manager.toString());
+        try{
+            manager.createAccount("smsms", "msmsms", "player");
+            System.out.println("After: \n");
+            System.out.println(manager.toString());
+        } catch (IllegalArgumentException e) {
+            System.out.println("Error caught!");
+        }
     }
 }

@@ -27,8 +27,6 @@ public class Player extends Account{
         return activeBet;
     }
 
-    
-
     public void hit(Card card){
         hand.addCard(card);
         return; //Send Message type "PlayerAction" (hit) to table
@@ -52,7 +50,8 @@ public class Player extends Account{
     }
 
     public boolean isBust(){
-        return true; // received from server
+        if(hand.getValue() > 21) return true;
+        return false;
     }
 
     public double getBalance(){

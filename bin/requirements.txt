@@ -1,0 +1,70 @@
+Project description:
+
+Multi-Player BlackJack
+Projects will include
+- Project documentation
+- Java source code
+- Junit test suite
+- Git source control repository
+- Brief presentation
+Create a multi-player blackjack gaming system. The system allows clients
+to log in, add funds to their accounts, play games of blackjack with other
+real players, or cash out their accounts. Standard rules apply. Cheating is
+minimized. Play is fair.
+
+This is a Java application with a GUI that operates over TCP/IP. This
+system requires a server application and client application. There is no
+web or HTML component. No databases, libraries, frameworks, or other
+technologies may be used without approval.
+
+Core Deliverables:
+
+1. Basic Game Mechanics
+   - Hit, Stand actions
+   - Dealer must hit on 16 and below, stand on 17 and above
+   - Proper card dealing and turn management
+
+2. Player Account System
+   - Login/logout functionality
+   - Balance management (add/remove funds)
+   - Basic account security
+
+3. Multiplayer Support
+   - 2-7 players per table
+   - Player rotation system
+   - Turn-based gameplay management
+
+4. Betting System
+   - Place bets before each hand
+   - Minimum/maximum bet limits
+   - Proper bet settlement after each round
+
+5. Game State Management
+   - Hand evaluation (win/loss/bust)
+   - Proper card deck handling
+   - Round progression tracking
+
+6. User Interface
+   - Clear display of cards and hands
+   - Visible player balances and bets
+   - Turn indicators and timers
+
+7. Server Architecture
+   - TCP/IP communication
+   - Multiple game table support
+   - Connection management
+
+8. Client Application
+   - GUI implementation
+   - Real-time updates
+   - Error handling
+
+9. Anti-Cheating Measures
+   - Server-side card handling
+   - Timeout management
+   - Basic security validations
+
+10. Game Room Management
+    - Create/join game tables
+    - Player limit enforcement
+    - Basic game settings control

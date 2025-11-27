@@ -33,7 +33,7 @@ public class GameTable {
 
     public void removePlayer(Player person){
         for(Player player : players){
-            if(player.getID().equals(person.getID())){
+            if(player.getID().equalsIgnoreCase(person.getID())){
                 players.remove(person);
             }
         }

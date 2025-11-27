@@ -1,180 +1,110 @@
 package Server;
 
-import Message.Message;
 import Enums.MessageType;
+import Message.Message;
+import java.io.*;
+import java.net.*;
+//import java.util.ArrayList;
 
-import java.io.IOException;
-import java.net.ServerSocket;
-import java.net.Socket;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.concurrent.CopyOnWriteArrayList;
 
-/**
- * Blackjack server that manages client connections and game state.
- * Listens on a port, accepts client connections, spawns ClientHandlers.
- */
 public class Server {
-    private int port;
-    private ServerSocket serverSocket;
-    private boolean running;
-    private List<ClientHandler> connectedClients;
-    private LoginManager loginManager;
-    private Map<String, GameTable> gameTables;
+    //private ArrayList<GameTable> gameTables;
+    private static LoginManager manager;
 
-    public Server(int port) {
-        this.port = port;
-        this.running = false;
-        this.connectedClients = new CopyOnWriteArrayList<>();
-        this.loginManager = new LoginManager();
-        this.gameTables = new HashMap<>();
-    }
+    public static void main(String[] args) throws IOException, ClassNotFoundException{
+        ServerSocket server = null;
+        System.out.println("ServerSocket awaiting connections...");
+        try{
+            //Change ip / port eventually
+            server = new ServerSocket(8080);
+            server.setReuseAddress(true);
 
-    /**
-     * Start the server and listen for incoming client connections.
-     */
-    public void start() {
-        try {
-            serverSocket = new ServerSocket(port);
-            running = true;
-            System.out.println("[Server] Started on port " + port);
-
-            // Accept client connections in a loop
-            while (running) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("[Server] Incoming connection from " + clientSocket.getInetAddress());
-
-                // Create and start a new ClientHandler thread
-                ClientHandler handler = new ClientHandler(clientSocket, this);
-                connectedClients.add(handler);
-                new Thread(handler, "ClientHandler-" + handler.getClientID()).start();
+            while(true){
+                Socket client = server.accept();
+                System.out.print("\nNew client connected: " + client.getInetAddress().getHostAddress() + "\n");
+                manager = new LoginManager();
+                manager.loadData();
+                ClientHandler clientSock = new ClientHandler(client);
+                new Thread(clientSock).start();
             }
         } catch (IOException e) {
-            if (running) {
-                System.err.println("[Server] Error accepting client: " + e.getMessage());
-            }
+            e.printStackTrace();
         } finally {
-            stop();
-        }
-    }
-
-    /**
-     * Stop the server and close all connections.
-     */
-    public void stop() {
-        running = false;
-        System.out.println("[Server] Shutting down...");
-
-        // Close all client handlers
-        for (ClientHandler handler : connectedClients) {
-            // ClientHandler will cleanup on next message read or timeout
-        }
-        connectedClients.clear();
-
-        try {
-            if (serverSocket != null && !serverSocket.isClosed()) {
-                serverSocket.close();
-            }
-        } catch (IOException e) {
-            System.err.println("[Server] Error closing server socket: " + e.getMessage());
-        }
-
-        System.out.println("[Server] Stopped.");
-    }
-
-    /**
-     * Broadcast a message to all connected clients.
-     */
-    public void broadcastUpdate(Message msg) {
-        for (ClientHandler handler : connectedClients) {
-            if (handler.isConnected()) {
-                handler.sendMessage(msg);
-            }
-        }
-    }
-
-    /**
-     * Send a message to a specific client by username or ID.
-     */
-    public void sendToClient(String identifier, Message msg) {
-        for (ClientHandler handler : connectedClients) {
-            if (handler.isConnected()) {
-                // Match by client ID or account username
-                if (handler.getClientID().equals(identifier) ||
-                    (handler.getAccount() != null && handler.getAccount().getUsername().equals(identifier))) {
-                    handler.sendMessage(msg);
-                    return;
+            if (server != null){
+                try{
+                    server.close();
+                    System.exit(1);
+                } catch (IOException e) {
+                    e.printStackTrace();
                 }
             }
         }
-        System.out.println("[Server] Client not found: " + identifier);
+        return;
     }
 
-    /**
-     * Handle an incoming message (can route to GameTable, etc).
-     */
-    public void handleMessage(Message msg) {
-        System.out.println("[Server] Processing message: " + msg.getMessageType());
-        // TODO: Route to appropriate handler (GameTable, etc)
-    }
+    private static class ClientHandler implements Runnable{
+        private final Socket clientSocket;
 
-    /**
-     * Remove a disconnected client handler from the registry.
-     */
-    public void removeClientHandler(ClientHandler handler) {
-        connectedClients.remove(handler);
-        System.out.println("[Server] Removed client handler. Active clients: " + connectedClients.size());
-    }
+        public ClientHandler(Socket socket){
+            this.clientSocket = socket;
+        }
 
-    /**
-     * Get the login manager.
-     */
-    public LoginManager getLoginManager() {
-        return loginManager;
-    }
+        @Override
+        public void run(){
+            try{
+                ObjectInputStream objectInputStream = new ObjectInputStream(clientSocket.getInputStream());
+                ObjectOutputStream objectOutputStream = new ObjectOutputStream(clientSocket.getOutputStream());
+                objectOutputStream.flush();
 
-    /**
-     * Get all connected clients (read-only).
-     */
-    public List<ClientHandler> getConnectedClients() {
-        return new ArrayList<>(connectedClients);
-    }
+                Message clientMessage = (Message) objectInputStream.readObject();
+                while((clientMessage.getMessageType() != MessageType.LOGOUT)){
+                    switch(clientMessage.getMessageType()){
+                        case LOGIN -> {
+                                if((clientMessage.getPayload() instanceof String payload)){
+                                    String[] tokens = payload.split(",");
+                                    Account account = manager.login(tokens[0], tokens[1]); //Assuming payload format is string "username,password".
+                                    objectOutputStream.writeObject(new Message(MessageType.OK, "SERVER", "CLIENT", account));
+                                    return;
+                                }
+                        }
+                    }
+                }
 
-    /**
-     * Get number of active connections.
-     */
-    public int getActiveConnectionCount() {
-        return connectedClients.size();
-    }
-
-    /**
-     * Get or create a game table by ID.
-     */
-    public GameTable getGameTable(String tableID) {
-        return gameTables.get(tableID);
-    }
-
-    /**
-     * Register a new game table.
-     */
-    public void registerGameTable(GameTable table) {
-        gameTables.put(table.getTableID(), table);
-    }
-
-    /**
-     * Entry point to start the server.
-     */
-    public static void main(String[] args) {
-        int port = 5000; // default port
-        if (args.length > 0) {
-            try {
-                port = Integer.parseInt(args[0]);
-            } catch (NumberFormatException e) {
-                System.err.println("Invalid port. Using default: " + port);
+            } catch(IOException | ClassNotFoundException e) {
+                e.printStackTrace();
+            } finally {
+                try {
+                    System.out.print("\nClient has disconnected.\n");
+                    clientSocket.close();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
             }
         }
 
-        Server server = new Server(port);
-        server.start();
+        //Helper
+        private Message ClientMessageHandler(Message clientMessage){
+            switch(clientMessage.getMessageType()){
+                case LOGIN:{
+                    //Assuming payload is string and formatted as "username,password" no spaces, case sensitive.
+                    if(clientMessage.getPayload() instanceof String string){
+                        String userpw = string.strip();         //convert Object to string and strip surroudning ws
+                        String[] tokens = userpw.split(",");
+                        manager.login(tokens[0], tokens[1]); //login(username,password)
+                        return new Message(MessageType.OK, "SERVER", "CLIENT.ID", null);
+                    }
+                }
+            }
+            return null;
+        }
+        
     }
+
+  
+ 
+
+    //public void start();
+    //public void stop();
+    //public void broadcastUpdate();
+    //public void handleMessage(Message msg);
 }
