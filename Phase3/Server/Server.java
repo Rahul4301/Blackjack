@@ -23,7 +23,8 @@ public class Server {
             while(true){
                 Socket client = server.accept();
                 System.out.print("\nNew client connected: " + client.getInetAddress().getHostAddress() + "\n");
-
+                manager = new LoginManager();
+                manager.loadData();
                 ClientHandler clientSock = new ClientHandler(client);
                 new Thread(clientSock).start();
             }
@@ -85,9 +86,8 @@ public class Server {
                     if(clientMessage.getPayload() instanceof String string){
                         String userpw = string.strip();         //convert Object to string and strip surroudning ws
                         String[] tokens = userpw.split(",");
-                        manager.login(tokens[0], tokens[1]); //login(username,password)
-                        LocalDateTime time = LocalDateTime.now();
-                        return new Message(MessageType.OK, "SERVER", "CLIENT.ID", null, time);
+                        Account acc = manager.login(tokens[0], tokens[1]); //login(username,password)
+                        return new Message(MessageType.OK, "SERVER", "CLIENT.ID", acc);
                     }
                 }
             }

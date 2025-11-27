@@ -1,6 +1,7 @@
 package Client;
 
 import Message.Message;
+import Server.Account;
 import enums.MessageType;
 import java.io.*;
 import java.net.*;
@@ -14,27 +15,20 @@ public class Client {
         sc.nextLine(); //flush scanner
         OutputStream out = null;
         InputStream in = null;
-
         try(Socket socket = new Socket("localhost", port)){
             ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
+            objectOutputStream.flush();
             ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream());
             System.out.print("\nConnection successful.\n");
-        
             
         } catch(IOException e) { //\ ClassNotFoundException e
         e.printStackTrace();
         }
     } 
 
-    public Message login(){
-        Scanner scan = new Scanner(System.in);
-        System.out.print("\nEnter a username: ");
-        String username = scan.nextLine();
-        System.out.print("\nEnter a password: ");
-        String password = scan.nextLine();
-
+    public static Message login(String username, String password){
         String userpw = (username + "," + password);
-        return new Message(MessageType.LOGIN,"CLIENT.ID", "SERVER", userpw, null); 
+        return new Message(MessageType.LOGIN,"CLIENT.ID", "SERVER", userpw); 
     }
 
 

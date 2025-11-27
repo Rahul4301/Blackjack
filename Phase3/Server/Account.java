@@ -1,9 +1,15 @@
 package Server;
+import java.io.Serializable;
 import enums.AccState;
 
-abstract class Account {
+
+public abstract class Account implements Serializable {
     protected String username, password;
     protected boolean sessionActive;
     protected AccState accountState;
     
+    @Override
+    public String toString() {
+    	return "Username: " + username + " | Password: " + password;
+    }
 }

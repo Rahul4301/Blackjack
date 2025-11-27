@@ -16,15 +16,13 @@ public class Message implements Serializable {
     private final String sender;
     private final String recipient;
     private final Object payload;
-    private final LocalDateTime timestamp;
 
-    public Message(MessageType messageType, String sender, String recipient, Object payload, LocalDateTime timestamp) {
+    public Message(MessageType messageType, String sender, String recipient, Object payload) {
         this.messageID = "M" + ++count;
         this.messageType = messageType;
         this.sender = sender;
         this.recipient = recipient;
         this.payload = payload;
-        this.timestamp = timestamp;
     }
 
     public String getMessageID() {
@@ -47,12 +45,8 @@ public class Message implements Serializable {
         return payload;
     }
 
-    public LocalDateTime getTimestamp() {
-        return timestamp;
-    }
-
     @Override
     public String toString() {
-        return "Message[id=" + messageID + ", type=" + messageType + ", sender=" + sender + ", recipient=" + recipient + ", timestamp=" + timestamp + "]";
+        return "Message[id=" + messageID + ", type=" + messageType + ", sender=" + sender + ", recipient=" + recipient + "]";
     }
 }
