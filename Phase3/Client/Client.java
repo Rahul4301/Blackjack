@@ -3,7 +3,7 @@ package Client;
 import Enums.MessageType;
 import Message.Message;
 import Server.Account;
-import enums.MessageType;
+import Enums.MessageType;
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
@@ -29,7 +29,6 @@ public class Client {
 
     public static Message login(String username, String password){
         String userpw = (username + "," + password);
-        return new Message(MessageType.LOGIN,"CLIENT.ID", "SERVER", userpw); 
         return new Message(MessageType.LOGIN,"CLIENT.ID", "SERVER", userpw); 
     }
 

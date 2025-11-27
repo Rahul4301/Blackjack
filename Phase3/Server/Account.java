@@ -1,6 +1,6 @@
 package Server;
 import java.io.Serializable;
-import enums.AccState;
+import Enums.AccState;
 
 
 public abstract class Account implements Serializable {

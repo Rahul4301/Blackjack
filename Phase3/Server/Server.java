@@ -91,8 +91,7 @@ public class Server {
                         String userpw = string.strip();         //convert Object to string and strip surroudning ws
                         String[] tokens = userpw.split(",");
                         manager.login(tokens[0], tokens[1]); //login(username,password)
-                        LocalDateTime time = LocalDateTime.now();
-                        return new Message(MessageType.OK, "SERVER", "CLIENT.ID", null, time);
+                        return new Message(MessageType.OK, "SERVER", "CLIENT.ID", null);
                     }
                 }
             }
