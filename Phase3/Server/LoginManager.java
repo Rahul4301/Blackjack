@@ -84,6 +84,20 @@ public class LoginManager {
         modified = true;
     }
 
+    public Account login(String username, String password){
+        try {
+            for(Account account : accounts){
+                if (account.username.equals(username) && account.password.equals(password)){
+                    return account;
+                }
+            }
+            throw new IllegalArgumentException();
+        } catch (IllegalArgumentException e) {
+            System.out.print("\nInvalid username / password!\n");
+            return null;
+        }
+    }
+
     @Override
     public String toString(){
         String all = "";

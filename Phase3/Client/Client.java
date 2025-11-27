@@ -1,5 +1,7 @@
 package Client;
 
+import Message.Message;
+import enums.MessageType;
 import java.io.*;
 import java.net.*;
 import java.util.Scanner;
@@ -21,6 +23,22 @@ public class Client {
             
         } catch(IOException e) { //\ ClassNotFoundException e
         e.printStackTrace();
-    }
+        }
     } 
+
+    public Message login(){
+        Scanner scan = new Scanner(System.in);
+        System.out.print("\nEnter a username: ");
+        String username = scan.nextLine();
+        System.out.print("\nEnter a password: ");
+        String password = scan.nextLine();
+
+        String userpw = (username + "," + password);
+        return new Message(MessageType.LOGIN,"CLIENT.ID", "SERVER", userpw, null); 
+    }
+
+
 }
+
+
+

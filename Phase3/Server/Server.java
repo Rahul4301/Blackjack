@@ -1,12 +1,17 @@
 package Server;
 
+import Message.Message;
+import enums.MessageType;
 import java.io.*;
 import java.net.*;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 
 
 public class Server {
     private ArrayList<GameTable> gameTables;
+    private static LoginManager manager;
+
     public static void main(String[] args) throws IOException, ClassNotFoundException{
         ServerSocket server = null;
         System.out.println("ServerSocket awaiting connections...");
@@ -49,10 +54,18 @@ public class Server {
             try{
                 ObjectInputStream objectInputStream = new ObjectInputStream(clientSocket.getInputStream());
                 ObjectOutputStream objectOutputStream = new ObjectOutputStream(clientSocket.getOutputStream());
+                objectOutputStream.flush();
+
+                boolean quit = false;
+                while(!quit){
+                    Message ClientMessage = (Message) objectInputStream.readObject();
+                    Message response = ClientMessageHandler(ClientMessage);
+                    objectOutputStream.writeObject(response);
+                }
 
 
 
-            } catch(IOException e) {
+            } catch(IOException | ClassNotFoundException e) {
                 e.printStackTrace();
             } finally {
                 try {
@@ -63,10 +76,34 @@ public class Server {
                 }
             }
         }
+
+        //Helper
+        private Message ClientMessageHandler(Message clientMessage){
+            switch(clientMessage.getMessageType()){
+                case LOGIN:{
+                    //Assuming payload is string and formatted as "username,password" no spaces, case sensitive.
+                    if(clientMessage.getPayload() instanceof String string){
+                        String userpw = string.strip();         //convert Object to string and strip surroudning ws
+                        String[] tokens = userpw.split(",");
+                        manager.login(tokens[0], tokens[1]); //login(username,password)
+                        LocalDateTime time = LocalDateTime.now();
+                        return new Message(MessageType.OK, "SERVER", "CLIENT.ID", null, time);
+                    }
+                }
+            }
+            return null;
+        }
+        
     }
+
+  
+ 
 
     //public void start();
     //public void stop();
     //public void broadcastUpdate();
     //public void handleMessage(Message msg);
+
+    //tester main
+
 }
