@@ -1,9 +1,9 @@
 package Client;
 
-import Server.GameTable;
-import Server.Player;
-import Server.Hand;
 import Server.Card;
+import Server.GameTable;
+import Server.Hand;
+import Server.Player;
 import java.util.Scanner;
 import java.util.Stack;
 

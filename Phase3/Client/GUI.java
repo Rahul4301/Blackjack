@@ -1,10 +1,9 @@
 package Client;
 
-import Server.GameTable;
-import Server.Player;
-import Server.Hand;
-import Server.Dealer;
 import Enums.GameState;
+import Server.GameTable;
+import Server.Hand;
+import Server.Player;
 
 /**
  * Enhanced GUI for displaying Blackjack game state and animations.
