@@ -43,6 +43,7 @@ public class Client {
                     case 1:{
                         System.out.print("Enter username: ");
                         String username = scan.nextLine();
+                        
                         System.out.print("Enter password: ");
                         String password = scan.nextLine();
                         objectOutputStream.writeObject(login(username, password));
