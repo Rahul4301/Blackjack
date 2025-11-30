@@ -2,6 +2,7 @@ package Server;
 
 import Enums.BetStatus;
 import Enums.GameState;
+import Enums.PlayerAction;
 import Shared.*;
 import java.util.ArrayList;
 import java.util.List;
@@ -21,9 +22,9 @@ public class GameTable {
         tableID = ("T" + ++count);
         this.dealer = dealer;
         players = new ArrayList<>(7);
-        shoe = new Shoe(7); //Shoe / deck is randomized by default in their constructors
+        shoe = new Shoe(7); //Shoe & deck is randomized by default in their constructors
         bets = new ArrayList<>();
-        state = GameState.IN_PROGRESS;
+        state = GameState.BETTING; //Game flow: BETTING -> DEALING -> IN_PROGRESS -> RESULTS
         currentPlayerIndex = 0;
     }
 
@@ -47,8 +48,19 @@ public class GameTable {
     }
 
     public void startRound(){
-        state = GameState.IN_PROGRESS;
+        if(state != GameState.BETTING) return;
+        if(players.size() < 1) return;
+
+        //Check if everyone placed a bet AND there is at least 1 player
+        
+        for(Player player : players){
+            if(player.getBet().getAmount() < 1.00) return;
+            else System.err.println("Bet must be at least $1");
+        }
+
         DealInitialCards();
+        state = GameState.IN_PROGRESS;
+        currentPlayerIndex = 0;
     }
 
     public void DealInitialCards(){
@@ -62,6 +74,48 @@ public class GameTable {
         for(int i = 0; i < 2; i++){
             dealer.hit(shoe.dealCard());
         }
+    }
+
+    public synchronized boolean handlePlayerAction(String playerID, PlayerAction action){
+        if (state != GameState.IN_PROGRESS) return false;
+        if (players.isEmpty()) return false;
+
+        Player currentPlayer = players.get(currentPlayerIndex);
+        if(!currentPlayer.getID().equalsIgnoreCase(playerID)) return false; //not this players turn
+
+        switch(action) {
+            case HIT:
+                handleHit(currentPlayer);
+                break;
+
+            case STAND:
+                handleStand(currentPlayer);
+                break;
+            
+            case DOUBLE:
+                handleDouble(currentPlayer);
+                break;
+
+            case SPLIT:
+                handleSplit(currentPlayer);
+                break;
+
+            default:
+                System.err.println("Not a viable player action!");
+                break;
+        }
+
+        if(currentPlayer.isDoneForRound()){
+            advanceToNextPlayer();
+        }
+
+        if(allPlayersDone()){
+            playerDealerTurn();
+            evaluateHands();
+            state = GameState.RESULTS;
+        }
+
+        return true;
     }
 
     public void evaluateHands(){
@@ -130,6 +184,15 @@ public class GameTable {
         String currentPlayerID = getCurrentPlayerID();
 
         return new TableSnapshot(tableID, state, currentPlayerID, dealerView, playerViews);
+    }
+
+    //handlePlayerActions helpers
+
+    private void handleHit(Player player){
+        boolean busted = player.hit(shoe.dealCard());
+        if(busted && !player.hasMoreHandsToPlay()){
+            
+        }
     }
 
     //Snapshot helpers

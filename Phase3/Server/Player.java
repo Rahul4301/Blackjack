@@ -27,9 +27,10 @@ public class Player extends Account{
         return activeBet;
     }
 
-    public void hit(Card card){
+    public boolean hit(Card card){
         hand.addCard(card);
-        return; //Send Message type "PlayerAction" (hit) to table
+        if(hand.getValue() > 21) return true; //return true = is a BUST
+        return false;
     }
 
     public void stand(){
