@@ -12,4 +12,12 @@ public abstract class Account implements Serializable {
     public String toString() {
     	return "Username: " + username + " | Password: " + password;
     }
+
+    public String getUsername(){
+        return username;
+    }
+
+    public AccState getAccState(){
+        return accountState;
+    }
 }

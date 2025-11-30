@@ -2,6 +2,7 @@ package Server;
 import Enums.MessageType;
 import Message.Message;
 import java.io.*;
+import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.UUID;
 
@@ -11,18 +12,20 @@ import java.util.UUID;
  */
 public class ClientHandler implements Runnable {
     private Socket socket;
-    private Server server;
+    //private Server server;
     private String clientID;
     private ObjectOutputStream out;
     private ObjectInputStream in;
     private boolean connected;
+    private LoginManager manager;
     private Account account; // authenticated account, null until login
 
-    public ClientHandler(Socket socket, Server server) {
+    public ClientHandler(Socket socket, LoginManager manager) {
         this.socket = socket;
-        this.server = server;
+        this.manager = manager;
+        //this.server = server;
         this.clientID = UUID.randomUUID().toString();
-        this.connected = true;
+        this.connected = false;
         this.account = null;
     }
 
@@ -35,7 +38,7 @@ public class ClientHandler implements Runnable {
             this.in = new ObjectInputStream(socket.getInputStream());
 
             System.out.println("[Server] New client connected: " + clientID);
-
+            connected = true;
             // Listen for incoming messages
             while (connected) {
                 try {
@@ -112,12 +115,11 @@ public class ClientHandler implements Runnable {
         String password = creds[1];
 
         // Authenticate via LoginManager
-        LoginManager loginMgr = server.getLoginManager();
-        Account authenticatedAccount = loginMgr.authenticate(username, password);
+        Account authenticatedAccount = manager.login(username, password);
 
         if (authenticatedAccount != null) {
             this.account = authenticatedAccount;
-            sendMessage(createOKResponse(msg, "Login successful"));
+            sendMessage(createOKResponse(msg, authenticatedAccount));
             System.out.println("[Server] User " + username + " logged in.");
             // Log login event
             UserLogger.log(username, "LOGIN");
@@ -131,12 +133,13 @@ public class ClientHandler implements Runnable {
      */
     private void handleLogout(Message msg) {
         if (account != null) {
-            server.getLoginManager().logout(account);
+            //manager.logout(account);
             System.out.println("[Server] User " + account.getUsername() + " logged out.");
             // Log logout event
             UserLogger.log(account.getUsername(), "LOGOUT");
             account = null;
             sendMessage(createOKResponse(msg, "Logout successful"));
+            connected = false;
         } else {
             sendMessage(createErrorResponse(msg, "No active session"));
         }
@@ -259,12 +262,12 @@ public class ClientHandler implements Runnable {
         try {
             connected = false;
             if (account != null) {
-                server.getLoginManager().logout(account);
+                manager.logout(account);
             }
             if (out != null) out.close();
             if (in != null) in.close();
             if (socket != null && !socket.isClosed()) socket.close();
-            server.removeClientHandler(this);
+            //server.removeClientHandler(this);
             System.out.println("[Server] ClientHandler " + clientID + " cleaned up.");
         } catch (IOException e) {
             System.err.println("[Server] Error during cleanup: " + e.getMessage());
@@ -274,7 +277,7 @@ public class ClientHandler implements Runnable {
     /**
      * Helper: create an OK response message.
      */
-    private Message createOKResponse(Message request, String payload) {
+    private Message createOKResponse(Message request, Object payload) {
         return new Message(
             UUID.randomUUID().toString(),
             MessageType.OK,

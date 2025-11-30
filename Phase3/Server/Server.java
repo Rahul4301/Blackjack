@@ -5,6 +5,8 @@ import Message.Message;
 import java.io.*;
 import java.net.*;
 //import java.util.ArrayList;
+import java.time.LocalDateTime;
+import java.util.UUID;
 
 
 public class Server {
@@ -24,7 +26,7 @@ public class Server {
                 System.out.print("\nNew client connected: " + client.getInetAddress().getHostAddress() + "\n");
                 manager = new LoginManager();
                 manager.loadData();
-                ClientHandler clientSock = new ClientHandler(client);
+                ClientHandler clientSock = new ClientHandler(client, manager);
                 new Thread(clientSock).start();
             }
         } catch (IOException e) {
@@ -42,69 +44,18 @@ public class Server {
         return;
     }
 
-    private static class ClientHandler implements Runnable{
-        private final Socket clientSocket;
-
-        public ClientHandler(Socket socket){
-            this.clientSocket = socket;
-        }
-
-        @Override
-        public void run(){
-            try{
-                ObjectInputStream objectInputStream = new ObjectInputStream(clientSocket.getInputStream());
-                ObjectOutputStream objectOutputStream = new ObjectOutputStream(clientSocket.getOutputStream());
-                objectOutputStream.flush();
-
-                Message clientMessage = (Message) objectInputStream.readObject();
-                while((clientMessage.getMessageType() != MessageType.LOGOUT)){
-                    switch(clientMessage.getMessageType()){
-                        case LOGIN -> {
-                                if((clientMessage.getPayload() instanceof String payload)){
-                                    String[] tokens = payload.split(",");
-                                    Account account = manager.login(tokens[0], tokens[1]); //Assuming payload format is string "username,password".
-                                    objectOutputStream.writeObject(new Message(MessageType.OK, "SERVER", "CLIENT", account));
-                                    return;
-                                }
-                        }
-                    }
-                }
-
-            } catch(IOException | ClassNotFoundException e) {
-                e.printStackTrace();
-            } finally {
-                try {
-                    System.out.print("\nClient has disconnected.\n");
-                    clientSocket.close();
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-            }
-        }
-
-        //Helper
-        private Message ClientMessageHandler(Message clientMessage){
-            switch(clientMessage.getMessageType()){
-                case LOGIN:{
-                    //Assuming payload is string and formatted as "username,password" no spaces, case sensitive.
-                    if(clientMessage.getPayload() instanceof String string){
-                        String userpw = string.strip();         //convert Object to string and strip surroudning ws
-                        String[] tokens = userpw.split(",");
-                        manager.login(tokens[0], tokens[1]); //login(username,password)
-                        return new Message(MessageType.OK, "SERVER", "CLIENT.ID", null);
-                    }
-                }
-            }
-            return null;
-        }
-        
+    public LoginManager getLoginManager(){
+        return manager;
     }
 
-  
- 
+}
+
+
+
+
 
     //public void start();
     //public void stop();
     //public void broadcastUpdate();
     //public void handleMessage(Message msg);
-}
+

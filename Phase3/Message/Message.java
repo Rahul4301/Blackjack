@@ -3,6 +3,7 @@ package Message;
 import Enums.MessageType;
 import java.io.Serializable;
 import java.time.LocalDateTime;
+import java.util.UUID;
 
 /**
  * Serializable messaging envelope used for client/server communication.
@@ -18,8 +19,8 @@ public class Message implements Serializable {
     private final Object payload;
     private final LocalDateTime timestamp;
 
-    public Message(MessageType messageType, String sender, String recipient, Object payload, LocalDateTime time) {
-        this.messageID = "M" + ++count;
+    public Message(String msgID, MessageType messageType, String sender, String recipient, Object payload, LocalDateTime time) {
+        this.messageID = msgID;
         this.messageType = messageType;
         this.sender = sender;
         this.recipient = recipient;

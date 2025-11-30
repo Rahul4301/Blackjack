@@ -20,7 +20,7 @@ public class LoginManager {
         modified = false;
     }
 
-    public void loadData(){
+    public synchronized void loadData(){
         File file = new File(sourceName);
         System.out.println(file.getAbsolutePath());
         try{
@@ -48,7 +48,7 @@ public class LoginManager {
     }
 
     //Save to file
-    public void save(){
+    public synchronized void save(){
         try(FileWriter writer = new FileWriter(sourceName)){
             for(Account account : accounts){
                 String type = getTypeString(account);
@@ -64,7 +64,7 @@ public class LoginManager {
 
     //Create account and add to ArrayList accounts 
     //Note: when using createAccount, surround it in "try - catch" block bc of exception throwing
-    public void createAccount(String username, String password, String type){
+    public synchronized void createAccount(String username, String password, String type){
         for (Account account : accounts){
             if (account.username.equalsIgnoreCase(username)){
                 throw new IllegalArgumentException("Username already exists: " + username);
@@ -84,7 +84,7 @@ public class LoginManager {
         modified = true;
     }
 
-    public Account login(String username, String password){
+    public synchronized Account login(String username, String password){
         try {
             for(Account account : accounts){
                 if (account.username.equals(username) && account.password.equals(password)){
@@ -96,6 +96,10 @@ public class LoginManager {
             System.out.print("\nInvalid username / password!\n");
             return null;
         }
+    }
+
+    public synchronized void logout(Account account){
+
     }
 
     @Override
