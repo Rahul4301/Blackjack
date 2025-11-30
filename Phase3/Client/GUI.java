@@ -41,4 +41,17 @@ public class GUI {
     public void displayError(String message) {
         System.out.println("ERROR: " + message);
     }
+
+    public void displayResult() {
+        System.out.println("Displaying game result");
+    }
+
+    public boolean askPlayAgain() {
+        System.out.println("Asking player if they want to play again");
+        return false; // Default: don't play again
+    }
+
+    public void shutdown() {
+        System.out.println("Shutting down GUI and closing connections");
+    }
 }
