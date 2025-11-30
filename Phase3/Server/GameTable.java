@@ -54,7 +54,7 @@ public class GameTable {
         //Check if everyone placed a bet AND there is at least 1 player
         
         for(Player player : players){
-            if(player.getBet().getAmount() < 1.00) return;
+            if(player.getBet().getAmount() >= 1.00) continue;
             else System.err.println("Bet must be at least $1");
         }
 
@@ -99,43 +99,69 @@ public class GameTable {
                 System.err.println("Not a viable player action!");
                 break;
         }
-        
+
         return true;
     }
 
     public void evaluateHands(){
-        for(Player player : players){
+        int dealerValue = dealer.getHandValue();
+        boolean dealerBust = dealerValue > 21;
 
-            //Check for BlackJack
-            if(player.getHandValue() == 21){
-                if(dealer.getHandValue() != 21){
-                    (player.getBet()).settle(BetStatus.BLACKJACK);
-                    continue;
-                }
+        for (Player player : players) {
+            Bet bet = player.getBet();
+            if (bet == null) {
+                continue;
             }
 
-            switch(dealer.compareHands(player.getHand())){
-                //Dealer hand higher than player
-                case MORE:{
-                    (player.getBet()).settle(BetStatus.LOSE);
-                    break;
-                }
-                
-                //Player hand higher than dealer
-                case LESS:{
-                    (player.getBet()).settle(BetStatus.WIN);
+            if (bet.isSettled()) {
+                continue;
+            }
+
+            int playerValue = player.getHandValue();
+            boolean playerBust = playerValue > 21;
+
+            // Check for Blackjack for the player
+            if (playerValue == 21 && dealerValue != 21) {
+                bet.settle(BetStatus.BLACKJACK);
+                continue;
+            }
+
+            // Player busts: player always loses, regardless of dealer
+            if (playerBust) {
+                bet.settle(BetStatus.LOSE);
+                continue;
+            }
+
+            // Dealer busts and player did not: player wins
+            if (dealerBust) {
+                bet.settle(BetStatus.WIN);
+                continue;
+            }
+
+            // At this point both values are <= 21 and neither has blackjack
+            switch (dealer.compareHands(player.getHand())) {
+                // Dealer hand higher than player
+                case MORE: {
+                    bet.settle(BetStatus.LOSE);
                     break;
                 }
 
-                //Equal hand value
-                case EQUAL:{
-                    (player.getBet()).settle(BetStatus.PUSH);
+                // Player hand higher than dealer
+                case LESS: {
+                    bet.settle(BetStatus.WIN);
+                    break;
+                }
+
+                // Equal hand value
+                case EQUAL: {
+                    bet.settle(BetStatus.PUSH);
                     break;
                 }
             }
         }
-        state = GameState.RESULTS;
-    }
+    state = GameState.RESULTS;
+}
+
 
     public String getTableID(){
         return tableID;
@@ -145,10 +171,17 @@ public class GameTable {
         return players;
     }
 
-    public String getCurrentPlayerID(){
-        if(players.isEmpty()) return null;
+    public String getCurrentPlayerID() {
+        // No "current player" once the betting round is over
+        if (state != GameState.IN_PROGRESS) {
+            return null;
+        }
+        if (currentPlayerIndex < 0 || currentPlayerIndex >= players.size()) {
+            return null;
+        }
         return players.get(currentPlayerIndex).getID();
     }
+
 
     public void resetTable(){
         dealer = null;
@@ -175,27 +208,34 @@ public class GameTable {
     //After each successful handlePlayerAction()
     //and After runDealerAndFinishRound()
 
-     public TableSnapshot createSnapshotFor(String requestingPlayerID){
+    public TableSnapshot createSnapshotFor(String requestingPlayerID) {
         DealerView dealerView = buildDealerView();
         List<PlayerView> playerViews = new ArrayList<>();
-        
-        for(Player p : players){
-            boolean isYourTurn = p.getID().equalsIgnoreCase(requestingPlayerID);
-            playerViews.add(buildPlayerView(p, isYourTurn));
-        }
 
         String currentPlayerID = getCurrentPlayerID();
+
+        for (Player p : players) {
+            boolean isYou = p.getID().equalsIgnoreCase(requestingPlayerID);
+            boolean isYourTurn = p.getID().equalsIgnoreCase(currentPlayerID);
+
+            playerViews.add(buildPlayerView(p, isYou, isYourTurn));
+        }
 
         return new TableSnapshot(tableID, state, currentPlayerID, dealerView, playerViews);
     }
 
+
     //handlePlayerAction helpers
-    private void advanceTurn(){
-        currentPlayerIndex++;
-        if(currentPlayerIndex >= players.size()){
+    private void advanceTurn() {
+        // If the current player is the last one, run dealer and finish round
+        if (currentPlayerIndex >= players.size() - 1) {
             runDealerAndFinishRound();
+        } else {
+            // Otherwise move to next player
+            currentPlayerIndex++;
         }
     }
+
 
     private void runDealerAndFinishRound(){
         playDealerTurn();
@@ -237,25 +277,37 @@ public class GameTable {
         return new DealerView(cardViews, hasHiddenCard);
     }
 
-    private PlayerView buildPlayerView(Player player, boolean isYourTurn){
+    private PlayerView buildPlayerView(Player player, boolean isYou, boolean isYourTurn) {
         Hand hand = player.getHand();
         List<Card> cards = hand.getCards();
         List<CardView> cardViews = new ArrayList<>();
 
-        for(Card card : cards){
-            cardViews.add(new CardView(card.getRank(), card.getSuit(), false)); //Player cards are never hidden
+        for (Card card : cards) {
+            // Player cards are never hidden
+            cardViews.add(new CardView(card.getRank(), card.getSuit(), false));
         }
 
         double betAmount = 0;
         Bet bet = player.getBet();
-
-        if(bet != null){
-            betAmount = (double) bet.getAmount();
+        if (bet != null) {
+            betAmount = bet.getAmount();
         }
 
         int handValue = hand.getValue();
-        boolean active = true;
+        boolean active = true; // you can refine this later
 
-        return new PlayerView(player.getID(), player.getUsername(), betAmount, handValue, active, isYourTurn, cardViews);
+        return new PlayerView(
+                player.getID(),
+                player.getUsername(),
+                betAmount,
+                handValue,
+                active,
+                isYou,
+                isYourTurn,
+                cardViews
+        );
     }
+
+
+
 }

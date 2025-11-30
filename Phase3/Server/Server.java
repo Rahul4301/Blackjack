@@ -205,7 +205,7 @@ public class Server {
                 sendMessage(createErrorResponse(msg, "Not logged in"));
                 return;
             }
-            sendMessage(createOKResponse(msg, "Bet received"));
+            sendMessage(createOKResponse(msg, "received"));
         }
 
         private void handlePlayerAction(Message msg) {

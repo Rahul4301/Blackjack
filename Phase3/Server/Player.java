@@ -17,7 +17,7 @@ public class Player extends Account{
         this.balance = balance;
         this.ID = ("P" + ++count);
         sessionID = null;
-        hand = null;
+        hand = new Hand();
         accountState = AccState.ACTIVE;
         this.activeBet = null;
     }
@@ -38,7 +38,7 @@ public class Player extends Account{
     }
 
     public void updateBalance(double amount){
-        this.balance = amount;
+        this.balance += amount;
         return;
     }
 

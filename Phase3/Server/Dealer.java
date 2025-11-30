@@ -14,7 +14,7 @@ public class Dealer extends Account {
         this.username = username;
         this.password = password;
         dealerID = ("D" + ++count);
-        hand = null;
+        hand = new Hand();
         //currentTable = null;
         sessionActive = false;
         accountState = AccState.ACTIVE;
