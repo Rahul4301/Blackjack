@@ -2,7 +2,9 @@ package Server;
 
 import Enums.BetStatus;
 import Enums.GameState;
+import Shared.*;
 import java.util.ArrayList;
+import java.util.List;
 
 public class GameTable {
     private static int count;
@@ -96,6 +98,19 @@ public class GameTable {
         state = GameState.RESULTS;
     }
 
+    public String getTableID(){
+        return tableID;
+    }
+
+    public ArrayList<Player> getPlayers(){
+        return players;
+    }
+
+    public String getCurrentPlayerID(){
+        if(players.isEmpty()) return null;
+        return players.get(currentPlayerIndex).getID();
+    }
+
     public void resetTable(){
         dealer = null;
         players.clear();
@@ -103,4 +118,63 @@ public class GameTable {
         shoe = null;
     }
 
+     public TableSnapshot createSnapshotFor(String requestingPlayerID){
+        DealerView dealerView = buildDealerView();
+        List<PlayerView> playerViews = new ArrayList<>();
+        
+        for(Player p : players){
+            boolean isYourTurn = p.getID().equalsIgnoreCase(requestingPlayerID);
+            playerViews.add(buildPlayerView(p, isYourTurn));
+        }
+
+        String currentPlayerID = getCurrentPlayerID();
+
+        return new TableSnapshot(tableID, state, currentPlayerID, dealerView, playerViews);
+    }
+
+    //Snapshot helpers
+
+    private DealerView buildDealerView(){
+        Hand dealerHand = dealer.getHand();
+        List<Card> cards = dealerHand.getCards();
+        List<CardView> cardViews = new ArrayList<>();
+
+        boolean hasHiddenCard = false;
+
+        for(int i = 0; i < cards.size(); i++){
+            Card c = cards.get(i);
+            boolean hidden = false;
+
+            if((state == GameState.DEALING || state == GameState.IN_PROGRESS) && i == 1 && cards.size() >= 2){ //second card is hole card (hidden card)
+                hidden = true;
+                hasHiddenCard = true; //hide card to player, let dealer know it is hiding its card
+            }
+
+            cardViews.add(new CardView(c.getRank(), c.getSuit(), hidden));
+        }
+
+        return new DealerView(cardViews, hasHiddenCard);
+    }
+
+    private PlayerView buildPlayerView(Player player, boolean isYourTurn){
+        Hand hand = player.getHand();
+        List<Card> cards = hand.getCards();
+        List<CardView> cardViews = new ArrayList<>();
+
+        for(Card card : cards){
+            cardViews.add(new CardView(card.getRank(), card.getSuit(), false)); //Player cards are never hidden
+        }
+
+        double betAmount = 0;
+        Bet bet = player.getBet();
+
+        if(bet != null){
+            betAmount = (double) bet.getAmount();
+        }
+
+        int handValue = hand.getValue();
+        boolean active = true;
+
+        return new PlayerView(player.getID(), player.getUsername(), betAmount, handValue, active, isYourTurn, cardViews);
+    }
 }

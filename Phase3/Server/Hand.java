@@ -19,12 +19,14 @@ public class Hand {
         return;
     }
 
-    public int getValue(){
-        for (Card card : cards){
+    public int getValue() {
+        handValue = 0;
+        for (Card card : cards) {
             handValue += card.getValue();
         }
-        return handValue;
-    }
+    return handValue;
+}
+
 
     public boolean isBust(){
         boolean flag = false;
@@ -51,4 +53,11 @@ public class Hand {
         }
         return "";
     }
+
+    public List<Card> getCards() {
+        return cards;
+    }
+
+
+
 }

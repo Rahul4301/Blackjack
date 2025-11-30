@@ -6,7 +6,7 @@ import java.util.List;
 public class PlayerView implements Serializable {
     private String playerId;
     private String username;
-    private int betAmount;
+    private double betAmount;
     private int handValue;
     private boolean active;
     private boolean you;
@@ -14,7 +14,7 @@ public class PlayerView implements Serializable {
 
     public PlayerView(String playerId,
                       String username,
-                      int betAmount,
+                      double betAmount,
                       int handValue,
                       boolean active,
                       boolean you,
@@ -30,7 +30,7 @@ public class PlayerView implements Serializable {
 
     public String getPlayerId() { return playerId; }
     public String getUsername() { return username; }
-    public int getBetAmount() { return betAmount; }
+    public double getBetAmount() { return betAmount; }
     public int getHandValue() { return handValue; }
     public boolean isActive() { return active; }
     public boolean isYou() { return you; }
