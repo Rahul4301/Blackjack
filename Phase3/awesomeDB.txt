@@ -1,0 +1,3 @@
+player1,password1,1000,REGULAR
+player2,password2,5000,VIP
+testuser,test123,2500,REGULAR
