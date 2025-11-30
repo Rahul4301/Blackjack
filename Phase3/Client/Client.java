@@ -34,19 +34,36 @@ public class Client {
 
             //TEST CLIENT / SERVER HANDLING
             //TODO: make server message handler
-            System.out.println("1 to login or 2 to logout");
+            System.out.println("1 to login, 2 to create account, or 3 to logout");
             Scanner scan = new Scanner(System.in);
             int choice = scan.nextInt();
+            scan.nextLine(); // flush scanner
             //test LOGIN
-            while(choice != 3){
+            while(choice != 4){
                 switch (choice){
 
                     case 1:{
-                        objectOutputStream.writeObject(login("sam","sam"));
+                        System.out.print("Enter username: ");
+                        String username = scan.nextLine();
+                        System.out.print("Enter password: ");
+                        String password = scan.nextLine();
+                        objectOutputStream.writeObject(login(username, password));
                         objectOutputStream.flush();
                     } break;
 
                     case 2:{
+                        // Create account
+                        System.out.print("Enter username: ");
+                        String username = scan.nextLine();
+                        System.out.print("Enter password: ");
+                        String password = scan.nextLine();
+                        System.out.print("Enter account type (PLAYER or DEALER): ");
+                        String type = scan.nextLine();
+                        objectOutputStream.writeObject(register(username, password, type));
+                        objectOutputStream.flush();
+                    } break;
+
+                    case 3:{
                     //test LOGOUT
                         objectOutputStream.writeObject(logout());
                         objectOutputStream.flush();
@@ -79,6 +96,16 @@ public class Client {
             clientUUID,
             "SERVER",
             userpw, LocalDateTime.now()); 
+    }
+
+    public static Message register(String username, String password, String type){
+        String[] regData = {username, password, type};
+        return new Message(
+            UUID.randomUUID().toString(), 
+            MessageType.REGISTER,
+            clientUUID,
+            "SERVER",
+            regData, LocalDateTime.now()); 
     }
 
     public static Message logout(){
