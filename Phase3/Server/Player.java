@@ -37,14 +37,6 @@ public class Player extends Account{
         return; //Send Message type "PlayerAction" to do nothing
     }
 
-    public void doubleDown(){
-        return; //Send message PlayerAction
-    }
-
-    public void split(){
-        return;
-    }
-
     public void updateBalance(double amount){
         this.balance = amount;
         return;
@@ -79,8 +71,10 @@ public class Player extends Account{
         return ID;
     }
 
-    public static void main(String[] args) {
-        Player player = new Player ("sam", "sam", 500);
-        System.out.print(player.placeBet(50).toString());
-    }
+    // put this in test class later
+    
+    // public static void main(String[] args) {
+    //     Player player = new Player ("sam", "sam", 500);
+    //     System.out.print(player.placeBet(50).toString());
+    // }
 }

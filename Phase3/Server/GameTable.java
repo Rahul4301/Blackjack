@@ -91,14 +91,6 @@ public class GameTable {
             case STAND:
                 handleStand(currentPlayer);
                 break;
-            
-            case DOUBLE:
-                handleDouble(currentPlayer);
-                break;
-
-            case SPLIT:
-                handleSplit(currentPlayer);
-                break;
 
             default:
                 System.err.println("Not a viable player action!");
