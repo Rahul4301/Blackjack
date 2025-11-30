@@ -13,14 +13,16 @@ public class GameTable {
     ArrayList<Bet> bets;
     Shoe shoe;
     GameState state;
+    private int currentPlayerIndex; // to keep track of whos turn it is
 
     public GameTable(Dealer dealer){
         tableID = ("T" + ++count);
         this.dealer = dealer;
         players = new ArrayList<>(7);
-        shoe = new Shoe(7);
+        shoe = new Shoe(7); //Shoe / deck is randomized by default in their constructors
         bets = new ArrayList<>();
         state = GameState.IN_PROGRESS;
+        currentPlayerIndex = 0;
     }
 
     public boolean addPlayer(Player player){
@@ -32,6 +34,9 @@ public class GameTable {
     }
 
     public void removePlayer(Player person){
+        if(players.size() == 0){
+            System.err.println("Cannot remove player - Player size is already 0!");
+        }
         for(Player player : players){
             if(player.getID().equalsIgnoreCase(person.getID())){
                 players.remove(person);
@@ -40,7 +45,8 @@ public class GameTable {
     }
 
     public void startRound(){
-        //TODO: Make startround after server / client classes finished
+        state = GameState.IN_PROGRESS;
+        DealInitialCards();
     }
 
     public void DealInitialCards(){
@@ -97,7 +103,4 @@ public class GameTable {
         shoe = null;
     }
 
-    public void broadcastUpdate(){
-        // Deal w/ after client / server alg established
-    }
 }

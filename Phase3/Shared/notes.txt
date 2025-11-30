@@ -1,0 +1,6 @@
+the idea of shared package is to provide a way for the client to update the information it has through
+table snapshots. The client will not do any direct actions, rather it will send
+requests in the form of Messages. If server allows action and returns OK, TableSnapshot
+will update clientside information.
+
+Im writing this for my own good, so i dont forget. sometimes i forget to write stuff down.
