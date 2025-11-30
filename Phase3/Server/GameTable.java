@@ -183,7 +183,7 @@ public class GameTable {
     private void handleHit(Player player){
         boolean busted = player.hit(shoe.dealCard());
         if(busted && !player.hasMoreHandsToPlay()){
-            
+
         }
     }
 
