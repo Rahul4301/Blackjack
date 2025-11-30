@@ -35,11 +35,16 @@ public class Bet {
 
     public double calculatePayout() {
         switch(outcome) {
-            case BLACKJACK: return amount * 1.5;
-            case WIN: return amount;
-            case PUSH: return 0; 
-            case LOSE: return -amount;
-            default: return 0;
+            case BLACKJACK:
+                return amount * 2.5;  // original bet + 1.5x payout
+            case WIN:
+                return amount * 2;    // return original bet + win
+            case PUSH:
+                return amount;        // return original bet
+            case LOSE:
+                return 0;             // lose the bet
+            default:
+                return 0;
         }
     }
 

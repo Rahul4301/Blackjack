@@ -3,6 +3,7 @@ import Enums.MessageType;
 import Message.Message;
 import java.io.*;
 import java.net.Socket;
+import java.util.Collection;
 import java.util.UUID;
 
 /**
@@ -17,6 +18,8 @@ public class ClientHandler implements Runnable {
     private ObjectInputStream in;
     private boolean connected;
     private Account account; // authenticated account, null until login
+    private GameTable currentTable; // current game table, null if not joined
+    private Player currentPlayer; // current player object (if account is Player)
 
     public ClientHandler(Socket socket, Server server) {
         this.socket = socket;
@@ -151,15 +154,41 @@ public class ClientHandler implements Runnable {
     }
 
     /**
-     * Handle bet placement (placeholder).
+     * Handle bet placement.
      */
     private void handleBetPlaced(Message msg) {
         if (account == null) {
             sendMessage(createErrorResponse(msg, "Not logged in"));
             return;
         }
-        // TODO: Validate bet and integrate with GameTable
-        sendMessage(createOKResponse(msg, "Bet received"));
+
+        if (currentTable == null) {
+            sendMessage(createErrorResponse(msg, "Not in a table"));
+            return;
+        }
+
+        try {
+            // Extract bet amount from payload
+            int betAmount = Integer.parseInt(msg.getPayload().toString());
+
+            if (currentPlayer == null || !(account instanceof Player)) {
+                sendMessage(createErrorResponse(msg, "Invalid player object"));
+                return;
+            }
+
+            // Place bet (validates balance internally)
+            Bet bet = currentPlayer.placeBet(betAmount);
+            if (bet != null) {
+                // Add bet to game table
+                currentTable.addBet(currentPlayer, bet);
+                sendMessage(createOKResponse(msg, "Bet placed: $" + betAmount));
+                broadcastTableUpdate();
+            } else {
+                sendMessage(createErrorResponse(msg, "Invalid bet amount or insufficient balance"));
+            }
+        } catch (NumberFormatException e) {
+            sendMessage(createErrorResponse(msg, "Invalid bet amount"));
+        }
     }
 
     /**
@@ -170,8 +199,32 @@ public class ClientHandler implements Runnable {
             sendMessage(createErrorResponse(msg, "Not logged in"));
             return;
         }
-        // TODO: Forward to GameTable
-        sendMessage(createOKResponse(msg, "Action received"));
+
+        if (currentTable == null) {
+            sendMessage(createErrorResponse(msg, "Not in a table"));
+            return;
+        }
+
+        try {
+            // Extract action from payload (hit, stand, double, split)
+            String action = msg.getPayload().toString().toLowerCase();
+
+            if (currentPlayer == null) {
+                sendMessage(createErrorResponse(msg, "Invalid player object"));
+                return;
+            }
+
+            // Process the action
+            boolean success = currentTable.processPlayerAction(currentPlayer, action);
+            if (success) {
+                sendMessage(createOKResponse(msg, "Action processed: " + action));
+                broadcastTableUpdate();
+            } else {
+                sendMessage(createErrorResponse(msg, "Action failed or invalid in current state"));
+            }
+        } catch (Exception e) {
+            sendMessage(createErrorResponse(msg, "Error processing action: " + e.getMessage()));
+        }
     }
 
     /**
@@ -182,8 +235,38 @@ public class ClientHandler implements Runnable {
             sendMessage(createErrorResponse(msg, "Not logged in"));
             return;
         }
-        // TODO: Add player to GameTable
-        sendMessage(createOKResponse(msg, "Joined table"));
+
+        // Only players can join tables
+        if (!(account instanceof Player)) {
+            sendMessage(createErrorResponse(msg, "Only players can join tables"));
+            return;
+        }
+
+        // Get first available table or create new one
+        GameTable table = null;
+        Collection<GameTable> allTables = server.getAllGameTables();
+        
+        for (GameTable t : allTables) {
+            if (t.getPlayers().size() < 7) {  // MAX_PLAYERS = 7
+                table = t;
+                break;
+            }
+        }
+
+        if (table == null) {
+            table = server.createGameTable();  // Create new table
+        }
+
+        // Add player to table
+        Player player = (Player) account;
+        if (table.addPlayer(player)) {
+            currentTable = table;
+            currentPlayer = player;
+            sendMessage(createOKResponse(msg, "Joined table: " + table.getTableID()));
+            broadcastTableUpdate();
+        } else {
+            sendMessage(createErrorResponse(msg, "Failed to join table"));
+        }
     }
 
     /**
@@ -194,7 +277,18 @@ public class ClientHandler implements Runnable {
             sendMessage(createErrorResponse(msg, "Not logged in"));
             return;
         }
-        // TODO: Remove player from GameTable
+
+        if (currentTable == null) {
+            sendMessage(createErrorResponse(msg, "Not in a table"));
+            return;
+        }
+
+        // Remove player from table
+        Player player = (Player) account;
+        currentTable.removePlayer(player);
+        currentTable = null;
+        currentPlayer = null;
+
         sendMessage(createOKResponse(msg, "Left table"));
     }
 
@@ -253,6 +347,33 @@ public class ClientHandler implements Runnable {
     }
 
     /**
+     * Broadcast current game table state to all connected clients.
+     */
+    private void broadcastTableUpdate() {
+        if (currentTable == null) return;
+
+        try {
+            // Create GAME_UPDATE message with table state as payload
+            Message update = new Message(
+                MessageType.GAME_UPDATE,
+                "SERVER",
+                "ALL",
+                currentTable,
+                java.time.LocalDateTime.now()
+            );
+
+            // Broadcast to all players in the table
+            for (Player player : currentTable.getPlayers()) {
+                server.sendToClient(player.getUsername(), update);
+            }
+
+            System.out.println("[Server] Broadcasted table update for table: " + currentTable);
+        } catch (Exception e) {
+            System.err.println("[Server] Error broadcasting table update: " + e.getMessage());
+        }
+    }
+
+    /**
      * Cleanup and close resources.
      */
     private void cleanup() {
@@ -276,7 +397,6 @@ public class ClientHandler implements Runnable {
      */
     private Message createOKResponse(Message request, String payload) {
         return new Message(
-            UUID.randomUUID().toString(),
             MessageType.OK,
             "SERVER",
             request.getSender(),
@@ -290,7 +410,6 @@ public class ClientHandler implements Runnable {
      */
     private Message createErrorResponse(Message request, String errorMsg) {
         return new Message(
-            UUID.randomUUID().toString(),
             MessageType.ERROR,
             "SERVER",
             request.getSender(),
