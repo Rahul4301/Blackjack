@@ -105,15 +105,32 @@ public class LoginManager {
         switch (type.toUpperCase()){
             case "PLAYER":
                 accounts.add(new Player(username, password, 1000));
+                numAccounts++;
                 break;
             case "DEALER":
                 accounts.add(new Dealer(username, password));
+                numAccounts++;
                 break;
             default:
                 throw new IllegalArgumentException("Invalid type: " + type);
         }
         modified = true;
         System.out.println("Account created: " + username + " as " + type);
+    }
+
+    // Convenience method for creating a Player account
+    public synchronized Account createPlayerAccount(String username, String password) {
+        for (Account account : accounts){
+            if (account.getUsername().equalsIgnoreCase(username)){
+                throw new IllegalArgumentException("Username already exists: " + username);
+            }
+        }
+        Player newPlayer = new Player(username, password, 1000);
+        accounts.add(newPlayer);
+        numAccounts++;
+        modified = true;
+        System.out.println("Player account created: " + username);
+        return newPlayer;
     }
 
     // Corrected login: removed unnecessary try-catch block and exception throwing.

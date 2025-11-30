@@ -146,11 +146,33 @@ public class ClientHandler implements Runnable {
     }
 
     /**
-     * Handle registration (placeholder).
+     * Handle registration (create new account).
      */
     private void handleRegister(Message msg) {
-        // TODO: Implement user registration logic
-        sendMessage(createErrorResponse(msg, "Registration not yet implemented"));
+        // Payload should contain [username, password, type]
+        if (!(msg.getPayload() instanceof String[])) {
+            sendMessage(createErrorResponse(msg, "Invalid registration payload"));
+            return;
+        }
+
+        String[] regData = (String[]) msg.getPayload();
+        if (regData.length < 3) {
+            sendMessage(createErrorResponse(msg, "Missing registration data"));
+            return;
+        }
+
+        String username = regData[0];
+        String password = regData[1];
+        String type = regData[2]; // "PLAYER" or "DEALER"
+
+        try {
+            manager.createAccount(username, password, type);
+            sendMessage(createOKResponse(msg, "Account created successfully"));
+            System.out.println("[Server] New account registered: " + username);
+            UserLogger.log(username, "REGISTER");
+        } catch (IllegalArgumentException e) {
+            sendMessage(createErrorResponse(msg, e.getMessage()));
+        }
     }
 
     /**
