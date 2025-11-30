@@ -91,14 +91,6 @@ public class GameTable {
             case STAND:
                 handleStand(currentPlayer);
                 break;
-            
-            case DOUBLE:
-                handleDouble(currentPlayer);
-                break;
-
-            case SPLIT:
-                handleSplit(currentPlayer);
-                break;
 
             default:
                 System.err.println("Not a viable player action!");
@@ -191,7 +183,7 @@ public class GameTable {
     private void handleHit(Player player){
         boolean busted = player.hit(shoe.dealCard());
         if(busted && !player.hasMoreHandsToPlay()){
-            
+
         }
     }
 
