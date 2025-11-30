@@ -85,28 +85,21 @@ public class GameTable {
 
         switch(action) {
             case HIT:
-                handleHit(currentPlayer);
+                currentPlayer.hit(shoe.dealCard());
+                if(currentPlayer.getHandValue() > 21){
+                    advanceTurn();
+                }
                 break;
 
             case STAND:
-                handleStand(currentPlayer);
+                advanceTurn();
                 break;
 
             default:
                 System.err.println("Not a viable player action!");
                 break;
         }
-
-        if(currentPlayer.isDoneForRound()){
-            advanceToNextPlayer();
-        }
-
-        if(allPlayersDone()){
-            playerDealerTurn();
-            evaluateHands();
-            state = GameState.RESULTS;
-        }
-
+        
         return true;
     }
 
@@ -164,6 +157,24 @@ public class GameTable {
         shoe = null;
     }
 
+    public void resetForNextRound(){
+        for (Player player : players){
+            player.getHand().clearHand();
+            player.placeBet(0);
+        }
+
+        dealer.getHand().clearHand();
+
+        bets.clear();
+        shoe = new Shoe(7);
+        currentPlayerIndex = 0;
+        state = GameState.BETTING;
+    }
+
+    //Send snapshots After: startRound() / dealInitialCards
+    //After each successful handlePlayerAction()
+    //and After runDealerAndFinishRound()
+
      public TableSnapshot createSnapshotFor(String requestingPlayerID){
         DealerView dealerView = buildDealerView();
         List<PlayerView> playerViews = new ArrayList<>();
@@ -178,12 +189,27 @@ public class GameTable {
         return new TableSnapshot(tableID, state, currentPlayerID, dealerView, playerViews);
     }
 
-    //handlePlayerActions helpers
+    //handlePlayerAction helpers
+    private void advanceTurn(){
+        currentPlayerIndex++;
+        if(currentPlayerIndex >= players.size()){
+            runDealerAndFinishRound();
+        }
+    }
 
-    private void handleHit(Player player){
-        boolean busted = player.hit(shoe.dealCard());
-        if(busted && !player.hasMoreHandsToPlay()){
+    private void runDealerAndFinishRound(){
+        playDealerTurn();
+        evaluateHands();
+        state = GameState.RESULTS;
+    }
 
+    private void playDealerTurn(){
+        Hand dealerHand = dealer.getHand();
+        int total = dealer.getHandValue();
+        
+        while(dealer.mustHit(total)){
+            dealerHand.addCard(shoe.dealCard());
+            total = dealer.getHandValue();
         }
     }
 

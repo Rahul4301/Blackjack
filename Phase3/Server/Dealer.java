@@ -21,31 +21,16 @@ public class Dealer extends Account {
     }
 
     
-    public void hit(Card card){
+    public boolean hit(Card card){
         hand.addCard(card);
-        return; //Send Message type "PlayerAction" (hit) to table
+        if(hand.getValue() > 21) return true; //return true = is a BUST
+        return false;
     }
 
+    public boolean mustHit(int total){
+        return total < 17;
+    }
 
-    // public void prepareRound(GameTable table){
-    //     return;
-    // }
-
-    // public void initialDeal(GameTable table){
-    //     return;
-    // }
-
-    // public void playDealerTurn(GameTable table){
-    //     return;
-    // }
-
-    // public void resolveRound(GameTable table){
-    //     return;
-    // }
-
-    // public void payout(GameTable table){
-    //     return;
-    // }
 
     public String getID(){
         return dealerID;
