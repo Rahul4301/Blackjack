@@ -1,9 +1,10 @@
 package Server;
 
+import java.io.Serializable;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Hand {
+public class Hand implements Serializable{
     private ArrayList<Card> cards;
     private boolean isActive;
     private int handValue;

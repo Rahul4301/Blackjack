@@ -32,7 +32,7 @@ public class Client {
 
             //TEST CLIENT / SERVER HANDLING
             //TODO: make server message handler
-            System.out.println("1 to login, 2 to create account, or 3 to logout");
+            System.out.println("1 to login, 2 to create account, or 3 to logout. 4 to exit and end connection to server");
             Scanner scan = new Scanner(System.in);
             int choice = scan.nextInt();
             scan.nextLine(); // flush scanner
@@ -43,7 +43,6 @@ public class Client {
                     case 1:{
                         System.out.print("Enter username: ");
                         String username = scan.nextLine();
-                        
                         System.out.print("Enter password: ");
                         String password = scan.nextLine();
                         objectOutputStream.writeObject(login(username, password));
@@ -65,6 +64,7 @@ public class Client {
                     case 3:{
                     //test LOGOUT
                         objectOutputStream.writeObject(logout());
+                        account = null;
                         objectOutputStream.flush();
                     } break;
 
@@ -79,7 +79,13 @@ public class Client {
                         account = acc;
                     }
                     choice = scan.nextInt();
+                    scan.nextLine();
             }
+            objectOutputStream.writeObject(exit());
+            objectOutputStream.flush();
+            Message response = (Message) objectInputStream.readObject();
+            System.out.println(response.toString());
+            
             socket.close();
             
         } catch(IOException | ClassNotFoundException e) {
@@ -104,7 +110,8 @@ public class Client {
             MessageType.REGISTER,
             clientUUID,
             "SERVER",
-            regData, LocalDateTime.now()); 
+            regData, 
+            LocalDateTime.now()); 
     }
 
     public static Message logout(){
@@ -114,6 +121,16 @@ public class Client {
             clientUUID,
             "SERVER",
             null,
+            LocalDateTime.now());
+    }
+
+    public static Message exit(){
+        return new Message(
+            UUID.randomUUID().toString(),
+            MessageType.EXIT, 
+            clientUUID, 
+            "SERVER", 
+            null, 
             LocalDateTime.now());
     }
 

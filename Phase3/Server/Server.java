@@ -130,6 +130,9 @@ public class Server {
                 case REQUEST_PROFILE:
                     handleRequestProfile(msg);
                     break;
+                case EXIT:
+                    handleExit(msg);
+                    break;
                 default:
                     System.out.println("[Server] Unhandled message type: " + msg.getMessageType());
             }
@@ -168,7 +171,6 @@ public class Server {
                 UserLogger.log(account.getUsername(), "LOGOUT");
                 account = null;
                 sendMessage(createOKResponse(msg, "Logout successful"));
-                connected = false;
             } else {
                 sendMessage(createErrorResponse(msg, "No active session"));
             }
@@ -238,6 +240,12 @@ public class Server {
                 return;
             }
             sendMessage(createOKResponse(msg, "Profile retrieved"));
+        }
+
+        private void handleExit(Message msg){
+            
+            sendMessage(createOKResponse(msg, "See you next time!"));
+            connected = false;
         }
 
         public void sendMessage(Message msg) {

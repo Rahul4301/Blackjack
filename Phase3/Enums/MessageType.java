@@ -14,6 +14,7 @@ public enum MessageType {
     JOIN_TABLE,
     LEAVE_TABLE,
     REQUEST_PROFILE,
-    PLAYER_ACTION
+    PLAYER_ACTION,
+    EXIT
 }
 
