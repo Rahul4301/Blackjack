@@ -2,7 +2,7 @@ package Server;
 
 import Enums.AccState;
 
-public class Player extends Account{
+public class Player extends Account {
     private static int count;
 
     private String ID;
@@ -29,22 +29,19 @@ public class Player extends Account{
 
     public boolean hit(Card card){
         hand.addCard(card);
-        if(hand.getValue() > 21) return true; //return true = is a BUST
-        return false;
+        return hand.getValue() > 21; // true = bust
     }
 
     public void stand(){
-        return; //Send Message type "PlayerAction" to do nothing
+        // no-op for now; action handled elsewhere
     }
 
     public void updateBalance(double amount){
         this.balance += amount;
-        return;
     }
 
     public boolean isBust(){
-        if(hand.getValue() > 21) return true;
-        return false;
+        return hand.getValue() > 21;
     }
 
     public double getBalance(){
@@ -63,6 +60,7 @@ public class Player extends Account{
         return activeBet;
     }
 
+    @Override
     public String getUsername(){
         return username;
     }
@@ -70,6 +68,7 @@ public class Player extends Account{
     public String getID(){
         return ID;
     }
+}
 
     // put this in test class later
     
@@ -77,4 +76,4 @@ public class Player extends Account{
     //     Player player = new Player ("sam", "sam", 500);
     //     System.out.print(player.placeBet(50).toString());
     // }
-}
+
