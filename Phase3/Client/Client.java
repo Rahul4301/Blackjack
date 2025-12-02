@@ -19,6 +19,7 @@ public class Client {
 
     private final ObjectOutputStream out;
     private final ObjectInputStream in;
+    private GUI gui;
 
     private Account account;
 
@@ -34,7 +35,13 @@ public class Client {
     public Account getAccount() {
         return account;
     }
+    public void setGUI(GUI gui) {
+        this.gui = gui;
+    }
 
+    public GUI getGUI(){
+        return gui;
+    }
     /* =========================
        Client <-> Server actions
        ========================= */
@@ -223,20 +230,32 @@ public void joinTable(String tableId) {
             if (response.getPayload() instanceof Shared.TableSnapshot snapshot) {
                 System.out.println("✓ Joined table " + tableId);
                 
-                // Create and display GUI
-                GUI gui = new GUI();
-                gui.displayTable(snapshot);
-                System.out.println("GUI window opened!");
+                // Use existing GUI if available, otherwise create new
+                if (gui != null) {
+                    gui.displayTable(snapshot);
+                    System.out.println("Updated existing GUI!");
+                } else {
+                    // Create new GUI (for backward compatibility)
+                    GUI newGUI = new GUI(this);  // Pass this client
+                    newGUI.displayTable(snapshot);
+                    this.gui = newGUI;  // Store reference
+                    System.out.println("GUI window opened!");
+                }
             }
         } else if (response.getMessageType() == MessageType.ERROR) {
             System.out.println("✗ Error: " + response.getPayload());
+            if (gui != null) {
+                gui.displayError((String) response.getPayload());
+            }
         }
 
     } catch (IOException | ClassNotFoundException e) {
         System.out.println("Error joining table: " + e.getMessage());
+        if (gui != null) {
+            gui.displayError("Error joining table: " + e.getMessage());
+        }
     }
 }
-
 public void leaveTable() {
     if (!isLoggedIn()) {
         System.out.println("Must be logged in");
