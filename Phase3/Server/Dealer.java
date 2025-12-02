@@ -56,9 +56,16 @@ public class Dealer extends Account {
     }
 
     public HandEval compareHands(Hand playerHand){
-        if (hand.getValue() > playerHand.getValue()) return HandEval.MORE;
-        else if (hand.getValue() < playerHand.getValue()) return HandEval.LESS;
-        else return HandEval.EQUAL;
+        int dealerValue = hand.getValue();
+        int playerValue = playerHand.getValue();
+
+        if (dealerValue > playerValue) {
+            return HandEval.MORE;
+        } else if (dealerValue < playerValue) {
+            return HandEval.LESS;
+        } else {
+            return HandEval.EQUAL;
+        }
     }
 
 }
