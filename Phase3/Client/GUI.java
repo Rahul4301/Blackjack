@@ -191,7 +191,6 @@ public class GUI {
 
     public void showDealerOptions() { /* dealer controls later */ }
 
-    public void showAnimations() { /* animations later */ }
 
     public void displayError(String message) {
         JOptionPane.showMessageDialog(frame, message, "Error", JOptionPane.ERROR_MESSAGE);
