@@ -1,5 +1,7 @@
 package Client;
 
+import Enums.PlayerAction;
+import Enums.GameState;   // add this
 
 import java.util.ArrayList;
 import java.util.Scanner;
@@ -52,7 +54,7 @@ public class Menu {
             if(isLoggedIn){ System.out.println("Welcome, " + currentUser + "!");}
             System.out.println("1) Login"); //done
             System.out.println("2) Register"); //done
-            System.out.println("3) Lobby");
+            System.out.println("3) Lobby"); //done(?)
             System.out.println("4) Deposit");
             System.out.println("5) Logout");//done
             System.out.println("6) Exit");//done
@@ -315,13 +317,11 @@ public class Menu {
                 case 3:
                     // Only allow if there is at least one player at the table
                     if (snapshot.getPlayers() == null || snapshot.getPlayers().isEmpty()) {
+                        //snapshot = client.requestTableState();
                         System.out.println("You cannot start the game. No players have joined this table yet.");
                     } else {
-                        // Ask server to start the round and return a fresh snapshot
-                        // TableSnapshot newSnap = client.startRound(snapshot.getTableId());
-                        // if (newSnap != null) {
-                        //     snapshot = newSnap;  // update view
-                        // }
+                        //Ask server to start the round and return a fresh snapshot
+                        client.startRound();
                     }
                     break;
                 case 4:
@@ -334,40 +334,91 @@ public class Menu {
         }
     }
 
-    public void managePlayerTable(TableSnapshot snapshot) {
+   public void managePlayerTable(TableSnapshot snapshot) {
         boolean playing = true;
 
         while (playing) {
+            if (snapshot == null) {
+                snapshot = client.requestTableState();
+                if (snapshot == null) {
+                    System.out.println("Could not load table state.");
+                    return;
+                }
+            }
+
             client.displaySnapshot(snapshot);
 
-            System.out.println("1) Hit");
-            System.out.println("2) Stand");
-            System.out.println("3) Refresh");
-            System.out.println("4) Leave table");
-            System.out.print("Select: ");
+            // If we are still in the betting phase, do not allow Hit / Stand yet
+            if (snapshot.getState() == GameState.BETTING) {
+                System.out.println("== Betting phase ==");
+                System.out.println("1) Place bet");
+                System.out.println("2) Refresh");
+                System.out.println("3) Leave table");
+                System.out.print("Select: ");
 
-            int choice = readInt();
-            switch(choice) {
-                case 1:
-                    //snapshot = client.playerHit(snapshot.getTableId());
-                    break;
-                case 2:
-                    //snapshot = client.playerStand(snapshot.getTableId());
-                    break;
-                case 3:
-                    snapshot = client.requestTableState();
-                    client.displaySnapshot(snapshot);
-                    break;
-                case 4:
-                    client.leaveTable();
-                    playing = false;
-                    break;
-                default:
-                    System.out.println("Not an option.");
-                    break;
+                int choice = readInt();
+                switch (choice) {
+                    case 1:
+                        System.out.print("Enter bet amount (whole dollars): ");
+                        int betInt = readInt();
+                        double amount = betInt;
+
+                        // Send BET_PLACED to the server
+                        client.placeBet(amount);
+
+                        // After placing the bet, pull a fresh snapshot
+                        snapshot = client.requestTableState();
+                        break;
+
+                    case 2:
+                        snapshot = client.requestTableState();
+                        break;
+
+                    case 3:
+                        client.leaveTable();
+                        playing = false;
+                        break;
+
+                    default:
+                        System.out.println("Not an option.");
+                        break;
+                }
+
+            } else {
+                // Normal in-round play menu, state should be IN_PROGRESS or RESULTS
+                System.out.println("1) Hit");
+                System.out.println("2) Stand");
+                System.out.println("3) Refresh");
+                System.out.println("4) Leave table");
+                System.out.print("Select: ");
+
+                int choice = readInt();
+                switch (choice) {
+                    case 1:
+                        // Send HIT and use the snapshot returned by the server
+                        snapshot = client.sendPlayerAction(PlayerAction.HIT);
+                        break;
+                    case 2:
+                        // Send STAND and use the snapshot returned by the server
+                        snapshot = client.sendPlayerAction(PlayerAction.STAND);
+                        break;
+                    case 3:
+                        // Explicit refresh from server
+                        snapshot = client.requestTableState();
+                        break;
+                    case 4:
+                        client.leaveTable();
+                        playing = false;
+                        break;
+                    default:
+                        System.out.println("Not an option.");
+                        break;
+                }
             }
         }
     }
+
+
 
 
     private int readInt() {

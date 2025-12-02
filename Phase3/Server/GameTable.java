@@ -5,18 +5,45 @@ import Enums.GameState;
 import Enums.PlayerAction;
 import Shared.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 
 public class GameTable {
     private static int count;
 
     private String tableID;
-    Dealer dealer;
-    ArrayList<Player> players;
-    ArrayList<Bet> bets;
-    Shoe shoe;
-    GameState state;
+    private Dealer dealer;
+    private ArrayList<Player> players;
+    private ArrayList<Bet> bets;
+    private Shoe shoe;
+    private GameState state;
     private int currentPlayerIndex; // to keep track of whos turn it is
+
+    //Test Implementation
+    public ArrayList<String> deck = new ArrayList<>();
+    public ArrayList<String> playerHand = new ArrayList<>();
+    public ArrayList<String> dealerHand = new ArrayList<>();
+    public boolean roundActive = false;
+
+    public synchronized void initDeck() {
+        deck.clear();
+        playerHand.clear();
+        dealerHand.clear();
+
+        String[] ranks = {"2","3","4","5","6","7","8","9","10","J","Q","K","A"};
+        String[] suits = {"H","D","C","S"};
+
+        for (String r : ranks) {
+            for (String s : suits) {
+                deck.add(r + s);
+            }
+        }
+
+        Collections.shuffle(deck);
+        roundActive = true;
+    }
+    //Test Implementation
+
 
     public GameTable(Dealer dealer){
         tableID = ("T" + ++count);
@@ -46,9 +73,9 @@ public class GameTable {
     }
 
 
-    public void startRound(){
-        if(state != GameState.BETTING) return;
-        if(players.size() < 1) return;
+    public boolean startRound(){
+        if(state != GameState.BETTING) return false;
+        if(players.size() < 1) return false;
 
         //Check if everyone placed a bet AND there is at least 1 player
         
@@ -60,6 +87,7 @@ public class GameTable {
         DealInitialCards();
         state = GameState.IN_PROGRESS;
         currentPlayerIndex = 0;
+        return true;
     }
 
     public void DealInitialCards(){
@@ -171,6 +199,10 @@ public class GameTable {
         return players;
     }
 
+    public Dealer getDealer(){
+        return dealer;
+    }
+
     public String getCurrentPlayerUsername() {
         if (state != GameState.IN_PROGRESS) {
             return null;
@@ -209,11 +241,10 @@ public class GameTable {
     //After each successful handlePlayerAction()
     //and After runDealerAndFinishRound()
 
-   public TableSnapshot createSnapshotFor(String requestingPlayerUsername) {
+    public TableSnapshot createSnapshotFor(String requestingPlayerUsername) {
         DealerView dealerView = buildDealerView();
         List<PlayerView> playerViews = new ArrayList<>();
 
-        // This will now be the current player's USERNAME
         String currentPlayerUsername = getCurrentPlayerID();
 
         for (Player p : players) {
@@ -222,12 +253,19 @@ public class GameTable {
             boolean isYourTurn = currentPlayerUsername != null
                     && p.getUsername().equalsIgnoreCase(currentPlayerUsername);
 
+            // This already builds CardView objects internally
             playerViews.add(buildPlayerView(p, isYou, isYourTurn));
         }
 
-        // currentPlayerId field in TableSnapshot will now actually hold a username
         return new TableSnapshot(tableID, state, currentPlayerUsername, dealerView, playerViews);
     }
+
+
+    private boolean isCurrentTurnFor(String username) {
+    // TODO Auto-generated method stub
+    throw new UnsupportedOperationException("Unimplemented method 'isCurrentTurnFor'");
+}
+
 
     public String getCurrentPlayerID() {
         // No "current player" once the betting round is over
@@ -272,7 +310,7 @@ public class GameTable {
 
     //Snapshot helpers
 
-    private DealerView buildDealerView(){
+    public DealerView buildDealerView(){
         Hand dealerHand = dealer.getHand();
         List<Card> cards = dealerHand.getCards();
         List<CardView> cardViews = new ArrayList<>();
@@ -322,7 +360,8 @@ public class GameTable {
                 active,
                 isYou,
                 isYourTurn,
-                cardViews
+                cardViews,
+                player.getBalance()
         );
     }
 

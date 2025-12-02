@@ -12,6 +12,7 @@ public class PlayerView implements Serializable {
     private boolean you;
     private boolean isYourTurn;
     private List<CardView> cards;
+    private double balance;           // NEW
 
     public PlayerView(String playerUsername,
                       String username,
@@ -20,7 +21,8 @@ public class PlayerView implements Serializable {
                       boolean active,
                       boolean you,
                       boolean isYourTurn,
-                      List<CardView> cards) {
+                      List<CardView> cards,
+                      double balance) {    // NEW PARAM
         this.playerUsername = playerUsername;
         this.username = username;
         this.betAmount = betAmount;
@@ -29,6 +31,7 @@ public class PlayerView implements Serializable {
         this.you = you;
         this.isYourTurn = isYourTurn;
         this.cards = cards;
+        this.balance = balance;           // NEW ASSIGNMENT
     }
 
     public String getPlayerUsername() { return playerUsername; }
@@ -39,4 +42,5 @@ public class PlayerView implements Serializable {
     public boolean isYou() { return you; }
     public boolean isYourTurn() { return isYourTurn; }
     public List<CardView> getCards() { return cards; }
+    public double getBalance() { return balance; }   // NEW GETTER
 }

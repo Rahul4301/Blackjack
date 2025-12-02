@@ -57,7 +57,7 @@ public class GameTableTest {
         // - STAND otherwise
         while (snap.getState() == GameState.IN_PROGRESS) {
 
-            String currentId = snap.getCurrentPlayerId();
+            String currentId = snap.getCurrentPlayerUsername();
             if (currentId == null) {
                 System.out.println("No current player id while IN_PROGRESS, something is wrong.");
                 break;
@@ -115,7 +115,7 @@ public class GameTableTest {
         System.out.println();
         System.out.println("=== " + label + " ===");
         System.out.println("State: " + snap.getState());
-        System.out.println("Current player id: " + snap.getCurrentPlayerId());
+        System.out.println("Current player id: " + snap.getCurrentPlayerUsername());
 
         DealerView dv = snap.getDealer();
         System.out.print("Dealer cards: ");
@@ -132,7 +132,7 @@ public class GameTableTest {
         System.out.println();
 
         for (PlayerView pv : snap.getPlayers()) {
-            System.out.print("Player " + pv.getUsername() + " (id " + pv.getPlayerId() + ")");
+            System.out.print("Player " + pv.getUsername() + " (id " + pv.getPlayerUsername() + ")");
             if (pv.isYourTurn()) {
                 System.out.print(" <-- requesting player");
             }

@@ -1,8 +1,10 @@
 package Server;
 
+import Enums.GameState;
 import Enums.MessageType;
 import Message.Message;
 import Shared.TableSnapshot;
+import Enums.PlayerAction;
 
 import java.io.*;
 import java.net.*;
@@ -113,6 +115,9 @@ public class Server {
                 case REGISTER:
                     handleRegister(msg);//done
                     break;
+                case DEPOSIT:
+                    handleDeposit(msg);
+                    break;
                 case BET_PLACED:
                     handleBetPlaced(msg);
                     break;
@@ -137,6 +142,9 @@ public class Server {
                 case REQUEST_TABLE_STATE:
                     handleRequestTableState(msg);
                     break;
+                case START:
+                    handleStart(msg);
+                    break;
                 case EXIT:
                     handleExit(msg); //done
                     break;
@@ -144,6 +152,53 @@ public class Server {
                     System.out.println("[Server] Unhandled message type: " + msg.getMessageType());
             }
         }
+
+        private void handleStart(Message msg){
+            if(table.startRound()){
+                sendMessage(createOKResponse(msg, table.createSnapshotFor(clientID)));
+                return;
+            } else {
+                sendMessage(createErrorResponse(msg, "Error Starting Round"));
+            }
+        }
+
+        private void handleDeposit(Message msg){
+            // 1. Validate payload type
+            if(!(msg.getPayload() instanceof String)){
+                sendMessage(createErrorResponse(msg, "Invalid deposit payload"));
+                return;
+            }
+
+            String depositStr = (String) msg.getPayload();
+            // 2. Validate that the string is a number
+            double deposit;
+            try {
+                deposit = Double.parseDouble(depositStr);
+            } catch(NumberFormatException e) {
+                sendMessage(createErrorResponse(msg, "Deposit amount must be a valid number"));
+                return;
+            }
+
+            // 3. Validate deposit is positive
+            if(deposit <= 0){
+                sendMessage(createErrorResponse(msg, "Deposit amount must be greater than zero"));
+                return;
+            }
+
+            // 4. Apply deposit to the account
+            // Replace "account" with however you track accounts
+            // Example:
+            // account.deposit(deposit);
+            if(account instanceof Player){
+                ((Player)account).updateBalance(deposit);
+                sendMessage(createOKResponse(msg, "Deposit successful: " + deposit));
+                return;
+            }
+
+            sendMessage(createErrorResponse(msg, "Deposit failed, account not found"));
+            return;
+        }
+
 
         private void handleLogin(Message msg) {
             if (!(msg.getPayload() instanceof String[])) {
@@ -217,26 +272,81 @@ public class Server {
                 sendMessage(createErrorResponse(msg, "Not logged in"));
                 return;
             }
-            sendMessage(createOKResponse(msg, "received"));
+
+            if (!(account instanceof Player player)) {
+                sendMessage(createErrorResponse(msg, "Only players can place bets"));
+                return;
+            }
+
+            if (currentTable == null) {
+                sendMessage(createErrorResponse(msg, "Not currently at a table"));
+                return;
+            }           
+
+            Object payload = msg.getPayload();
+            if (!(payload instanceof Double amount)) {
+                sendMessage(createErrorResponse(msg, "Expected bet amount (Double) as payload"));
+                return;
+            }
+            // Place the bet on this player's object
+            player.placeBet(amount);
+
+            GameTable table = currentTable;
+
+            // For simple one-player, one-dealer flow, start the round immediately
+            boolean started = table.startRound();  // uses GameTable.startRound which deals cards and sets state
+            if (!started) {
+                sendMessage(createErrorResponse(msg,
+                        "Could not start round. Make sure at least one player is seated and has a valid bet."));
+                return;
+            }
+
+            // After starting the round, broadcast a snapshot to all at this table
+            broadcastSnapshot(table);
+
         }
+
 
         private void handlePlayerAction(Message msg) {
             if (account == null) {
                 sendMessage(createErrorResponse(msg, "Not logged in"));
                 return;
             }
-            sendMessage(createOKResponse(msg, "Action received"));
+
+            if (!(account instanceof Player player)) {
+                sendMessage(createErrorResponse(msg, "Only players can act on a hand"));
+                return;
+            }
+
+            if (currentTable == null) {
+                sendMessage(createErrorResponse(msg, "Not currently at a table"));
+                return;
+            }
+
+            Object payload = msg.getPayload();
+            if (!(payload instanceof PlayerAction playerAction)) {
+                sendMessage(createErrorResponse(msg, "Expected action PlayerAction payload (e.g., HIT or STAND)"));
+                return;
+            }
+
+            GameTable table = currentTable;
+
+            // Use the existing blackjack engine in GameTable
+            boolean applied = table.handlePlayerAction(player.getUsername(), playerAction);
+            if (!applied) {
+                // Wrong state, not player's turn, etc
+                sendMessage(createErrorResponse(msg, "Action not allowed at this time"));
+                return;
+            }
+
+            // After each successful player action, broadcast an updated snapshot
+            broadcastSnapshot(table);
         }
+
 
        private void handleJoinTable(Message msg) {
             if (account == null) {
                 sendMessage(createErrorResponse(msg, "Not logged in"));
-
-                // after adding the player to the table
-                // Snapshot for this player (now keyed by username)
-                TableSnapshot snapshotForPlayer = table.createSnapshotFor(account.getUsername());
-                sendMessage(createOKResponse(msg, snapshotForPlayer));
-
                 return;
             }
 
@@ -253,7 +363,7 @@ public class Server {
             String tableId = (String) msg.getPayload();
             GameTable table = tables.get(tableId);
             if (table == null) {
-                sendMessage(createErrorResponse(msg, "Unknown table: " + tableId));
+                sendMessage(createErrorResponse(msg, "Table not found: " + tableId));
                 return;
             }
 
@@ -263,18 +373,18 @@ public class Server {
                 return;
             }
 
-            // Track attachment
+            // Track which table this client is at
             currentTable = table;
             currentTableId = tableId;
             tableClients.computeIfAbsent(tableId, k -> new ArrayList<>()).add(this);
 
             System.out.println("[Server] Player " + player.getUsername() + " joined table " + tableId);
 
-            // Snapshot for this player
+            // Send an initial snapshot to this player
             TableSnapshot snapshotForPlayer = table.createSnapshotFor(player.getUsername());
             sendMessage(createOKResponse(msg, snapshotForPlayer));
-
         }
+
 
         private void handleLeaveTable(Message msg) {
             if (account == null) {
@@ -314,7 +424,7 @@ public class Server {
 
             // Notify remaining clients at that table
             if (tables.containsKey(tableId)) {
-                //broadcastSnapshot(table);
+                broadcastSnapshot(table);
             }
         }
 
@@ -385,35 +495,39 @@ public class Server {
             connected = false;
         }
 
-        // private void broadcastSnapshot(GameTable table) {
-        //     String tableId = table.getTableID();
-        //     List<ClientHandler> list = tableClients.get(tableId);
-        //     if (list == null || list.isEmpty()) {
-        //         return;
-        //     }
+        
 
-        //     for (ClientHandler handler : list) {
-        //         TableSnapshot snapshot;
+        private void broadcastSnapshot(GameTable table) {
+            String tableId = table.getTableID();
+            List<ClientHandler> list = tableClients.get(tableId);
+            if (list == null || list.isEmpty()) {
+                return;
+            }
 
-        //         if (handler.account instanceof Player p) {
-        //             // pass username here
-        //             snapshot = table.createSnapshotFor(p.getUsername());
-        //         } else {
-        //             // Dealer or unknown, no "you" flag
-        //             snapshot = table.createSnapshotFor(null);
-        //         }
+            for (ClientHandler handler : list) {
+                TableSnapshot snapshot;
 
-        //         Message snapshotMsg = new Message(
-        //                 UUID.randomUUID().toString(),
-        //                 MessageType.TABLE_SNAPSHOT,
-        //                 "SERVER",
-        //                 handler.clientID,
-        //                 snapshot,
-        //                 java.time.LocalDateTime.now()
-        //         );
-        //         handler.sendMessage(snapshotMsg);
-        //     }
-        // }
+                if (handler.account instanceof Player p) {
+                    // personalize snapshot for this player
+                    snapshot = table.createSnapshotFor(p.getUsername());
+                } else {
+                    // dealer or unknown, no "you" flag
+                    snapshot = table.createSnapshotFor(null);
+                }
+
+                Message update = new Message(
+                        UUID.randomUUID().toString(),
+                        MessageType.TABLE_SNAPSHOT,     
+                        "SERVER",
+                        handler.getClientID(),
+                        snapshot,
+                        java.time.LocalDateTime.now()
+                );
+
+                handler.sendMessage(update);
+            }
+        }
+
 
 
 
@@ -500,7 +614,8 @@ public class Server {
                 java.time.LocalDateTime.now()
             );
         }
-    }
+
+    } //end of Client Handler
     
      /* =========================
        Main entry point

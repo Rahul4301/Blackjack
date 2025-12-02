@@ -1,6 +1,7 @@
 package Client;
 
 import Enums.MessageType;
+import Enums.PlayerAction;
 import Message.Message;
 import Server.Account;
 import Shared.CardView;
@@ -152,20 +153,21 @@ public class Client {
             System.out.println("Error during logout: " + e.getMessage());
         }
     }
-        public void sendMessage(Message msg) {
-            try {
-                if (out != null) {
-                    out.writeObject(msg);
-                    out.flush();
-                    System.out.println("[Client] Sent: " + msg.getMessageType());
-                } else {
-                    System.err.println("[Client] Cannot send message: output stream is null");
-                }
-            } catch (IOException e) {
-                System.err.println("[Client] Error sending message: " + e.getMessage());
-                // Handle disconnect
+
+    public void sendMessage(Message msg) {
+        try {
+            if (out != null) {
+                out.writeObject(msg);
+                out.flush();
+                System.out.println("[Client] Sent: " + msg.getMessageType());
+            } else {
+                System.err.println("[Client] Cannot send message: output stream is null");
             }
+        } catch (IOException e) {
+            System.err.println("[Client] Error sending message: " + e.getMessage());
+            // Handle disconnect
         }
+    }
 
     public void sendExit() {
         try {
@@ -291,108 +293,117 @@ public void leaveTable() {
     } catch (IOException | ClassNotFoundException e) {
         System.out.println("Error leaving table: " + e.getMessage());
     }
-}
-
-public void listTables() {
-    if (!isLoggedIn()) {
-        System.out.println("Must be logged in");
-        return;
     }
 
-    try {
-        Message listMsg = new Message(
-                UUID.randomUUID().toString(),
-                MessageType.LIST_TABLES,
-                clientUUID,
-                "SERVER",
-                null,
-                LocalDateTime.now()
-        );
+    public void listTables() {
+        if (!isLoggedIn()) {
+            System.out.println("Must be logged in");
+            return;
+        }
 
-        out.writeObject(listMsg);
-        out.flush();
+        try {
+            Message listMsg = new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.LIST_TABLES,
+                    clientUUID,
+                    "SERVER",
+                    null,
+                    LocalDateTime.now()
+            );
 
-        Message response = (Message) in.readObject();
-        
-        if (response.getPayload() instanceof java.util.List) {
-            @SuppressWarnings("unchecked")
-            java.util.List<String> tables = (java.util.List<String>) response.getPayload();
-            System.out.println("Available tables:");
-            for (String id : tables) {
-                System.out.println("  - " + id);
+            out.writeObject(listMsg);
+            out.flush();
+
+            Message response = (Message) in.readObject();
+            
+            if (response.getPayload() instanceof java.util.List) {
+                @SuppressWarnings("unchecked")
+                java.util.List<String> tables = (java.util.List<String>) response.getPayload();
+                System.out.println("Available tables:");
+                for (String id : tables) {
+                    System.out.println("  - " + id);
+                }
             }
-        }
 
-    } catch (IOException | ClassNotFoundException e) {
-        System.out.println("Error listing tables: " + e.getMessage());
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error listing tables: " + e.getMessage());
+        }
     }
-}
     public void placeBet(double amount) {
-    if (!isLoggedIn()) {
-        System.out.println("Must be logged in");
-        return;
-    }
-
-    try {
-        Message betMsg = new Message(
-                UUID.randomUUID().toString(),
-                MessageType.BET_PLACED,
-                clientUUID,
-                "SERVER",
-                amount,
-                LocalDateTime.now()
-        );
-
-        out.writeObject(betMsg);
-        out.flush();
-
-        Message response = (Message) in.readObject();
-        
-        if (response.getMessageType() == MessageType.TABLE_SNAPSHOT) {
-            TableSnapshot snapshot = (TableSnapshot) response.getPayload();
-            // Update GUI if needed
-            System.out.println("Bet placed: $" + amount);
+        if (!isLoggedIn()) {
+            System.out.println("Must be logged in");
+            return;
         }
 
-    } catch (IOException | ClassNotFoundException e) {
-        System.out.println("Error placing bet: " + e.getMessage());
-    }
-}
+        try {
+            Message betMsg = new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.BET_PLACED,
+                    clientUUID,
+                    "SERVER",
+                    amount,
+                    LocalDateTime.now()
+            );
 
-public void sendPlayerAction(String action, GUI gui) {
-    if (!isLoggedIn()) {
-        System.out.println("Must be logged in");
-        return;
-    }
+            out.writeObject(betMsg);
+            out.flush();
 
-    try {
-        Message actionMsg = new Message(
-                UUID.randomUUID().toString(),
-                MessageType.PLAYER_ACTION,
-                clientUUID,
-                "SERVER",
-                action,
-                LocalDateTime.now()
-        );
+            Message response = (Message) in.readObject();
+            
+            if (response.getMessageType() == MessageType.TABLE_SNAPSHOT) {
+                TableSnapshot snapshot = (TableSnapshot) response.getPayload();
+                // Update GUI if needed
+                System.out.println("Bet placed: $" + amount);
+            }
 
-        out.writeObject(actionMsg);
-        out.flush();
-
-        Message response = (Message) in.readObject();
-        
-        if (response.getMessageType() == MessageType.TABLE_SNAPSHOT) {
-            TableSnapshot snapshot = (TableSnapshot) response.getPayload();
-            gui.displayTable(snapshot);
-            System.out.println("Action: " + action);
-        } else if (response.getMessageType() == MessageType.ERROR) {
-            gui.displayError((String) response.getPayload());
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error placing bet: " + e.getMessage());
         }
-
-    } catch (IOException | ClassNotFoundException e) {
-        System.out.println("Error sending action: " + e.getMessage());
     }
 
-}
+    public TableSnapshot sendPlayerAction(PlayerAction action) {
+        if (!isLoggedIn()) {
+            System.out.println("Must be logged in");
+            return null;
+            }
+
+        try {
+            Message actionMsg = new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.PLAYER_ACTION,
+                    clientUUID,
+                    "SERVER",
+                    action,                    // send the enum, not a String
+                    LocalDateTime.now()
+            );
+
+            out.writeObject(actionMsg);
+            out.flush();
+
+            Message response = (Message) in.readObject();
+
+            if (response.getMessageType() == MessageType.TABLE_SNAPSHOT &&
+                    response.getPayload() instanceof TableSnapshot snapshot) {
+
+                // Reuse your existing helper to update local state and print
+                handleTableSnapshot(snapshot);
+                return snapshot;
+
+            } else if (response.getMessageType() == MessageType.ERROR) {
+                System.out.println("Server error: " + response.getPayload());
+                return null;
+            } else {
+                System.out.println("Unexpected response to PLAYER_ACTION: " + response);
+                return null;
+            }
+
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error sending action: " + e.getMessage());
+            return null;
+        }
+    }
+
+
 
     //Snapshot helpers
 
@@ -401,7 +412,7 @@ public void sendPlayerAction(String action, GUI gui) {
         this.currentTableId = snapshot.getTableId();
 
         // For now, just print a simple view
-        //displaySnapshot(snapshot);
+        displaySnapshot(snapshot);
     }
 
     public void displaySnapshot(TableSnapshot snap) {
@@ -448,6 +459,31 @@ public void sendPlayerAction(String action, GUI gui) {
         }
     }
 
+   public void startRound(){
+        try{
+            Message start = new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.START,
+                    clientUUID,
+                    "SERVER",
+                    null,
+                    LocalDateTime.now()
+            );
+
+            out.writeObject(start);
+            out.flush();
+
+            Message response = (Message) in.readObject();
+            if(!(response.getPayload() instanceof TableSnapshot)){
+                System.out.println("A TableSnapshot was expected");
+                return;
+            }
+            handleTableSnapshot((TableSnapshot) response.getPayload());
+        } catch (IOException | ClassNotFoundException e){
+
+        }
+   }
+
 
 
     //Snapshot helpers
@@ -489,6 +525,32 @@ public void sendPlayerAction(String action, GUI gui) {
         }
     }
 
+    public void playerHit(){
+        try{
+            Message playerHitMsg = new Message(
+                UUID.randomUUID().toString(),
+                MessageType.PLAYER_ACTION,
+                clientUUID,
+                "SERVER",
+                PlayerAction.HIT,
+                LocalDateTime.now()
+            );
+
+        sendMessage(playerHitMsg);
+
+        Message response = (Message) in.readObject();
+
+        if(response.getMessageType() == MessageType.OK){
+            requestTableState();
+            return;
+        }
+        throw new ClassNotFoundException("Error with playerHitMsg");
+        } catch (IOException | ClassNotFoundException e){
+            System.out.println(e);
+        }
+        
+    }
+
     /* =========================
        Main entry point
        ========================= */
@@ -497,11 +559,11 @@ public void sendPlayerAction(String action, GUI gui) {
         clientUUID = UUID.randomUUID().toString();
         Scanner sc = new Scanner(System.in);
 
-        System.out.print("Enter port #: ");
-        int port = sc.nextInt();
-        sc.nextLine(); // flush
+        // System.out.print("Enter port #: ");
+        // int port = sc.nextInt();
+        // sc.nextLine(); // flush
 
-        try (Socket socket = new Socket("localhost", port)) {
+        try (Socket socket = new Socket("localhost", 8080)) {
 
             ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
             out.flush();
