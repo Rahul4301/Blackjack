@@ -1,14 +1,14 @@
 package Server;
 
-import Enums.GameState;
 import Enums.MessageType;
+import Enums.PlayerAction;
 import Message.Message;
 import Shared.TableSnapshot;
-import Enums.PlayerAction;
-
 import java.io.*;
 import java.net.*;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Enumeration;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -672,6 +672,27 @@ public class Server {
      /* =========================
        Main entry point
        ========================= */    
+
+    private static String findLocalIp() {
+        try {
+        Enumeration<NetworkInterface> interfaces = NetworkInterface.getNetworkInterfaces();
+        for (NetworkInterface ni : Collections.list(interfaces)) {
+            if (!ni.isUp() || ni.isLoopback()) {
+                continue;
+            }
+            for (InetAddress addr : Collections.list(ni.getInetAddresses())) {
+                if (addr instanceof Inet4Address && !addr.isLoopbackAddress()) {
+                    return addr.getHostAddress();
+                }
+            }
+        }
+    } catch (SocketException e) {
+        e.printStackTrace();
+    }
+    // fallback
+    return "127.0.0.1";
+}
+
        public static void main(String[] args) {
         manager = new LoginManager();
         System.out.println("Loading user data...");
@@ -681,6 +702,8 @@ public class Server {
         ExecutorService pool = Executors.newFixedThreadPool(MAX_THREADS);
         ServerSocket server = null;
         int port = 8080;
+
+        System.out.println("Server starting on IP: " + server.getLocalSocketAddress() + ", Port: " + port);
 
         System.out.println("ServerSocket awaiting connections on port " + port + "...");
 

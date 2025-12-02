@@ -1,6 +1,5 @@
 package Client;
 
-import Enums.PlayerAction;
 import Enums.Rank;
 import Enums.Suit;
 import Shared.CardView;
@@ -11,59 +10,64 @@ import java.awt.*;
 import java.util.List;
 import javax.swing.*;
 
+/**
+ * GUI for the Blackjack client. Displays game tables, hands, and manages screen transitions.
+ * Features a casino-themed green felt background with professional card rendering.
+ */
 public class GUI {
-    private DefaultListModel<String> tableModel;
-    private JList<String> tableList;
-    private boolean inTableMode = false;
 
-    private javax.swing.Timer autoRefreshTimer;
-
-    private JFrame frame;
-    private JPanel rootPanel;
+    private final JFrame frame;
+    private final JPanel rootPanel;
     private String currentScreen;
-    private Client client;
+    private static final int WINDOW_WIDTH = 900;
+    private static final int WINDOW_HEIGHT = 600;
+    private static final Color CASINO_GREEN = new Color(0, 120, 0);
+    private static final Color CARD_TEXT = new Color(200, 20, 20);
 
     public GUI() {
-        this(null);
-    }
-    public GUI(Client client) {
-        this.client = client;
-        this.currentScreen = "LOGIN";
-        tableModel = new DefaultListModel<>();
-        tableList = new JList<>(tableModel);
+        this.currentScreen = "TABLE";
+        this.frame = new JFrame("Blackjack Client - Professional Edition");
+        this.rootPanel = new JPanel();
         initFrame();
-        startAutoRefresh();
-        showLoginScreen();
     }
 
-    /** Window setup */
+    /** Window setup and initialization */
     private void initFrame() {
-        frame = new JFrame("Blackjack Client");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(900, 600);
-        frame.setLocationRelativeTo(null); // center on screen
+        frame.setSize(WINDOW_WIDTH, WINDOW_HEIGHT);
+        frame.setLocationRelativeTo(null);
+        frame.setResizable(true);
 
-        rootPanel = new JPanel();
-        rootPanel.setBackground(new Color(0, 120, 0)); // casino green
+        rootPanel.setBackground(CASINO_GREEN);
         rootPanel.setLayout(new BoxLayout(rootPanel, BoxLayout.Y_AXIS));
 
         frame.setContentPane(rootPanel);
         frame.setVisible(true);
     }
-    //show a table snapshot (dealer + player hands)
+
+    /** Public API: show a table snapshot (dealer + player hands) */
     public void displayTable(TableSnapshot snapshot) {
+        if (snapshot == null) {
+            displayError("Table snapshot is null");
+            return;
+        }
+
         currentScreen = "TABLE";
-        inTableMode = true;
         rootPanel.removeAll();
-        rootPanel.setLayout(new BoxLayout(rootPanel, BoxLayout.Y_AXIS));
+
+        // ---- Title ----
+        JLabel titleLabel = new JLabel("BLACKJACK TABLE");
+        titleLabel.setForeground(Color.YELLOW);
+        titleLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        titleLabel.setFont(titleLabel.getFont().deriveFont(Font.BOLD, 28f));
 
         // ---- Dealer row ----
-        JLabel dealerLabel = new JLabel("Dealer");
+        JLabel dealerLabel = new JLabel("DEALER");
         dealerLabel.setForeground(Color.WHITE);
         dealerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        dealerLabel.setFont(dealerLabel.getFont().deriveFont(Font.BOLD, 22f));
+        dealerLabel.setFont(dealerLabel.getFont().deriveFont(Font.BOLD, 20f));
 
-        DealerView dealerView = snapshot.getDealerView();
+        DealerView dealerView = snapshot.getDealer();
         JPanel dealerCardsPanel = buildCardsPanel(
                 dealerView != null ? dealerView.getCards() : List.of(),
                 true,
@@ -72,11 +76,11 @@ public class GUI {
 
         // ---- Player row ----
         PlayerView you = findYou(snapshot.getPlayers());
-        String playerTitle = (you != null ? "You: " + you.getUsername() : "Player");
+        String playerTitle = (you != null ? "YOU: " + you.getUsername() : "YOUR HAND");
         JLabel playerLabel = new JLabel(playerTitle);
         playerLabel.setForeground(Color.WHITE);
         playerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        playerLabel.setFont(playerLabel.getFont().deriveFont(Font.BOLD, 22f));
+        playerLabel.setFont(playerLabel.getFont().deriveFont(Font.BOLD, 20f));
 
         JPanel playerCardsPanel = buildCardsPanel(
                 you != null ? you.getCards() : List.of(),
@@ -84,140 +88,37 @@ public class GUI {
                 false
         );
 
+        // ---- Game state info ----
+        JLabel stateLabel = new JLabel("Status: " + snapshot.getGameState());
+        stateLabel.setForeground(new Color(255, 255, 100));
+        stateLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+        stateLabel.setFont(stateLabel.getFont().deriveFont(Font.PLAIN, 14f));
+
         // ---- Layout ----
-        rootPanel.add(Box.createVerticalStrut(30));
+        rootPanel.add(Box.createVerticalStrut(20));
+        rootPanel.add(titleLabel);
+        rootPanel.add(Box.createVerticalStrut(20));
         rootPanel.add(dealerLabel);
         rootPanel.add(Box.createVerticalStrut(10));
         rootPanel.add(dealerCardsPanel);
-        rootPanel.add(Box.createVerticalStrut(40));
+        rootPanel.add(Box.createVerticalStrut(30));
         rootPanel.add(playerLabel);
         rootPanel.add(Box.createVerticalStrut(10));
         rootPanel.add(playerCardsPanel);
-
-        // ======================================================================
-        // >>> LEAVE TABLE + BACK TO LOBBY <<<
-        // ======================================================================
-        JPanel controlRow = new JPanel();
-        controlRow.setOpaque(false);
-
-        JButton leaveBtn = new JButton("Leave Table");
-        leaveBtn.addActionListener(e -> {
-            if (client != null) {
-                client.leaveTable();
-            }
-            showLobby();
-        });
-
-        JButton backBtn = new JButton("Back to Lobby");
-        backBtn.addActionListener(e -> showLobby());
-
-        controlRow.add(leaveBtn);
-        controlRow.add(backBtn);
-
         rootPanel.add(Box.createVerticalStrut(20));
-        rootPanel.add(controlRow);
-
-        // ======================================================================
-        // >>> PLAYER ACTION BUTTONS (Hit, Stand, Double, Bet) <<<
-        // ======================================================================
-        JPanel playerActions = new JPanel();
-        playerActions.setOpaque(false);
-
-        JButton hitBtn = new JButton("Hit");
-        JButton standBtn = new JButton("Stand");
-        JButton doubleBtn = new JButton("Double");
-        JButton betBtn = new JButton("Bet");
-
-        // Add to panel
-        playerActions.add(hitBtn);
-        playerActions.add(standBtn);
-        playerActions.add(doubleBtn);
-        playerActions.add(betBtn);
-
-        // Add panel to GUI
-        rootPanel.add(Box.createVerticalStrut(15));
-        rootPanel.add(playerActions);
-
-        // ---- BUTTON HANDLERS ----
-        // ---- BUTTON HANDLERS ----
-        // ---- BUTTON HANDLERS ----
-
-        hitBtn.addActionListener(e -> {
-            if (client != null) {
-                TableSnapshot updated = client.sendPlayerAction(PlayerAction.HIT);
-                if (updated != null) {
-                    displayTable(updated);
-                }
-            }
-        });
-
-        standBtn.addActionListener(e -> {
-            if (client != null) {
-                TableSnapshot updated = client.sendPlayerAction(PlayerAction.STAND);
-                if (updated != null) {
-                    displayTable(updated);
-                }
-            }
-        });
-
-        doubleBtn.addActionListener(e -> {
-            if (client != null) {
-                TableSnapshot updated = client.sendPlayerAction(PlayerAction.DOUBLE);
-                if (updated != null) {
-                    displayTable(updated);
-                }
-            }
-        });
-
-
-        betBtn.addActionListener(e -> {
-            String amtStr = JOptionPane.showInputDialog(frame, "Enter bet amount:");
-            try {
-                double amt = Double.parseDouble(amtStr);
-                if (client != null) {
-                    client.placeBet(amt);
-                }
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(frame, "Invalid bet");
-            }
-        });
-
-        // ======================================================================
-        // >>> DEALER ACTION BUTTON (Start Round) — ONLY IF THIS USER IS DEALER <<<
-        // ======================================================================
-        if (client != null && client.isDealer()) {
-
-            JPanel dealerActions = new JPanel();
-            dealerActions.setOpaque(false);
-
-            JButton startRoundBtn = new JButton("Start Round");
-            dealerActions.add(startRoundBtn);
-
-            startRoundBtn.addActionListener(e -> {
-                if (client != null) {
-                    client.startRound();
-                }
-            });
-
-            rootPanel.add(Box.createVerticalStrut(15));
-            rootPanel.add(dealerActions);
-        }
-
-        // ======================================================================
-        // END BUTTON INSERTION
-        // ======================================================================
-
+        rootPanel.add(stateLabel);
         rootPanel.add(Box.createVerticalGlue());
+
         rootPanel.revalidate();
         rootPanel.repaint();
     }
 
-
     /** Build a horizontal panel of card labels */
-    private JPanel buildCardsPanel(List cards, boolean dealerRow, boolean dealerHasHidden) {
+    private JPanel buildCardsPanel(List<?> cards, boolean dealerRow, boolean dealerHasHidden) {
         JPanel panel = new JPanel();
-        panel.setOpaque(false); // let green background show
+        panel.setOpaque(false);
         panel.setLayout(new FlowLayout(FlowLayout.CENTER, 10, 5));
+        panel.setAlignmentX(Component.CENTER_ALIGNMENT);
 
         int index = 0;
         for (Object o : cards) {
@@ -235,32 +136,38 @@ public class GUI {
         return panel;
     }
 
+    /** Visual representation of a single card */
     private JLabel createCardLabel(CardView card, boolean hidden) {
         String text;
         if (hidden) {
-            text = "??";
+            text = "?";
         } else {
-            text = rankToString(card.getRank()) + suitToSymbol(card.getSuit());
+            text = rankToString(card.getRank()) + "\n" + suitToSymbol(card.getSuit());
         }
 
         JLabel label = new JLabel(text, SwingConstants.CENTER);
         label.setOpaque(true);
         label.setBackground(Color.WHITE);
-        label.setBorder(BorderFactory.createLineBorder(Color.BLACK));
-        label.setFont(label.getFont().deriveFont(Font.BOLD, 24f));
-        label.setPreferredSize(new Dimension(60, 90));
+        label.setBorder(BorderFactory.createLineBorder(CARD_TEXT, 2));
+        label.setFont(label.getFont().deriveFont(Font.BOLD, 20f));
+        label.setPreferredSize(new Dimension(70, 100));
+        label.setForeground(CARD_TEXT);
 
         return label;
     }
 
-    private PlayerView findYou(List players) {
+    /** Try to find the PlayerView that represents "you" */
+    private PlayerView findYou(List<?> players) {
         if (players == null) return null;
 
+        // Prefer the one marked as "you"
         for (Object o : players) {
             if (o instanceof PlayerView pv && pv.isYou()) {
                 return pv;
             }
         }
+
+        // Otherwise return first one
         for (Object o : players) {
             if (o instanceof PlayerView pv) {
                 return pv;
@@ -269,6 +176,7 @@ public class GUI {
         return null;
     }
 
+    /** Convert Rank enum to display string */
     private String rankToString(Rank rank) {
         if (rank == null) return "?";
         return switch (rank) {
@@ -288,6 +196,7 @@ public class GUI {
         };
     }
 
+    /** Convert Suit enum to Unicode symbol */
     private String suitToSymbol(Suit suit) {
         if (suit == null) return "?";
         return switch (suit) {
@@ -298,262 +207,64 @@ public class GUI {
         };
     }
 
-    public void updateGameState() { /* hook up to server later */ }
+    /** Display a login/menu screen */
+    public void displayLoginScreen() {
+        currentScreen = "LOGIN";
+        JOptionPane.showMessageDialog(frame, "Login screen - Connect to server", "Login", JOptionPane.INFORMATION_MESSAGE);
+    }
 
-    public void showPlayerOptions() { /* show buttons later */ }
+    /** Display game lobby with table list */
+    public void displayLobby() {
+        currentScreen = "LOBBY";
+        JOptionPane.showMessageDialog(frame, "Lobby screen - Available tables listed here", "Lobby", JOptionPane.INFORMATION_MESSAGE);
+    }
 
-    public void showDealerOptions() { /* dealer controls later */ }
+    /** Update game state (called when server sends new snapshot) */
+    public void updateGameState() {
+        // This will be called from Client when new snapshots arrive
+    }
 
+    /** Show action buttons for player turn */
+    public void showPlayerOptions() {
+        JOptionPane.showMessageDialog(frame, "Player options: Hit, Stand, Double", "Your Turn", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /** Show dealer-specific options */
+    public void showDealerOptions() {
+        JOptionPane.showMessageDialog(frame, "Dealer options: Deal, Shuffle", "Dealer Menu", JOptionPane.INFORMATION_MESSAGE);
+    }
+
+    /** Display error message to user */
     public void displayError(String message) {
         JOptionPane.showMessageDialog(frame, message, "Error", JOptionPane.ERROR_MESSAGE);
     }
 
-    public void displayResult() { /* result popup later */ }
+    /** Display game result (win/loss/push) */
+    public void displayResult() {
+        JOptionPane.showMessageDialog(frame, "Hand result", "Round Complete", JOptionPane.INFORMATION_MESSAGE);
+    }
 
-    public boolean askPlayAgain() { return false; }
+    /** Ask if player wants to play another hand */
+    public boolean askPlayAgain() {
+        int result = JOptionPane.showConfirmDialog(frame, "Play again?", "Next Hand", JOptionPane.YES_NO_OPTION);
+        return result == JOptionPane.YES_OPTION;
+    }
 
+    /** Gracefully shutdown the GUI */
     public void shutdown() {
         if (frame != null) {
             frame.dispose();
         }
-        System.out.println("Shutting down GUI");
+        System.out.println("[GUI] Shutting down GUI");
     }
 
-    /** Starts a Swing timer that refreshes the table while we are on the TABLE screen. */
-    private void startAutoRefresh() {
-        // Avoid starting multiple timers
-        if (autoRefreshTimer != null && autoRefreshTimer.isRunning()) {
-            return;
-        }
-
-        autoRefreshTimer = new javax.swing.Timer(1000, e -> {
-            // Only refresh when we are actually viewing a table
-            if (!"TABLE".equals(currentScreen)) {
-                return;
-            }
-
-            if (client == null) {
-                return;
-            }
-
-            TableSnapshot snap = client.requestTableState();
-            if (snap != null) {
-                displayTable(snap);
-            }
-        });
-
-        autoRefreshTimer.start();
+    /** Check if GUI frame is still active */
+    public boolean isActive() {
+        return frame != null && frame.isDisplayable();
     }
 
-
-
-    public void showLoginScreen() {
-        currentScreen = "LOGIN";
-        rootPanel.removeAll();
-        
-        JLabel title = new JLabel("Blackjack Login", SwingConstants.CENTER);
-        title.setFont(new Font("Arial", Font.BOLD, 24));
-        title.setForeground(Color.WHITE);
-        
-        JPanel loginPanel = new JPanel(new GridLayout(3, 2, 10, 10));
-        loginPanel.setOpaque(false);
-        
-        JTextField userField = new JTextField();
-        JPasswordField passField = new JPasswordField();
-        
-        loginPanel.add(new JLabel("Username:"));
-        loginPanel.add(userField);
-        loginPanel.add(new JLabel("Password:"));
-        loginPanel.add(passField);
-        
-        JButton loginBtn = new JButton("Login");
-        JButton registerBtn = new JButton("Register");
-        
-        loginBtn.addActionListener(e -> {
-            String username = userField.getText();
-            String password = new String(passField.getPassword());
-            
-            if (client != null && client.login(username, password)) {
-                showLobby();  // Go to lobby after successful login
-            } else {
-                // For testing without client
-                JOptionPane.showMessageDialog(frame, 
-                    "Login successful (demo mode)", 
-                    "Info", 
-                    JOptionPane.INFORMATION_MESSAGE);
-                showLobby();  // Go to lobby anyway for testing
-            }
-        });
-        
-        registerBtn.addActionListener(e -> {
-            String username = userField.getText();
-            String password = new String(passField.getPassword());
-            
-            if (client != null) {
-                // Assuming "PLAYER" as default type
-                if (client.register(username, password, "PLAYER")) {
-                    showLobby();
-                }
-            } else {
-                JOptionPane.showMessageDialog(frame, 
-                    "Registration would happen here", 
-                    "Info", 
-                    JOptionPane.INFORMATION_MESSAGE);
-                showLobby();  // Go to lobby for testing
-            }
-        });
-        
-        loginPanel.add(loginBtn);
-        loginPanel.add(registerBtn);
-        
-        // Center everything
-        rootPanel.setLayout(new GridBagLayout());
-        GridBagConstraints gbc = new GridBagConstraints();
-        gbc.gridwidth = GridBagConstraints.REMAINDER;
-        gbc.anchor = GridBagConstraints.CENTER;
-        
-        rootPanel.add(title, gbc);
-        rootPanel.add(Box.createVerticalStrut(20));
-        rootPanel.add(loginPanel, gbc);
-        
-        rootPanel.revalidate();
-        rootPanel.repaint();
-    }
-
-    public void showLobby() {
-        currentScreen = "LOBBY";
-        rootPanel.removeAll();
-        rootPanel.setLayout(new BorderLayout());
-        
-        JLabel title = new JLabel("Blackjack Lobby", SwingConstants.CENTER);
-        title.setFont(new Font("Arial", Font.BOLD, 24));
-        title.setForeground(Color.WHITE);
-        
-        // --- Populate table list from server ---
-        if (tableModel == null) {
-            tableModel = new DefaultListModel<>();
-        }
-        tableModel.clear();
-
-        // Fetch real tables from server
-        if (client != null && client.isLoggedIn()) {
-            java.util.List<String> tables = client.requestTableList();  // <--- NEW
-
-            if (tables != null) {
-                for (String tableID : tables) {
-                    tableModel.addElement("Table " + tableID);
-                }
-            } else {
-                tableModel.addElement("No tables found");
-            }
-
-        } else {
-            // Demo mode
-            tableModel.addElement("Table T1");
-        }
-
-        if (tableList == null) {
-            tableList = new JList<>(tableModel);
-            tableList.setBackground(new Color(220, 220, 220));
-        } else {
-            tableList.setModel(tableModel);
-        }
-
-
-        
-        JButton joinBtn = new JButton("Join Selected Table");
-        JButton refreshBtn = new JButton("Refresh");
-        JButton logoutBtn = new JButton("Logout");
-        JButton createTableBtn = new JButton("Create Table");
-
-        // Add action listeners
-       joinBtn.addActionListener(e -> {
-            int index = tableList.getSelectedIndex();
-            if (index >= 0) {
-                String selected = tableModel.getElementAt(index);
-                String tableId = selected.split(" ")[1];
-
-                if (client != null) {
-                    TableSnapshot snap = client.joinTable(tableId);
-                    if (snap != null) displayTable(snap);
-                }
-            } else {
-                JOptionPane.showMessageDialog(frame, "Please select a table first");
-            }
-        });
-
-        
-        refreshBtn.addActionListener(e -> {
-        if (client != null) {
-            java.util.List<String> tables = client.requestTableList();
-
-            tableModel.clear();
-            if (tables != null) {
-                for (String t : tables) {
-                    tableModel.addElement("Table " + t);
-                }
-            }
-        }
-    });
-
-        
-        logoutBtn.addActionListener(e -> {
-            if (client != null) {
-                client.logout();
-            }
-            showLoginScreen();  // Go back to login
-        });
-
-        createTableBtn.addActionListener(e -> {
-            if (client != null) {
-                TableSnapshot snap = client.createTable();
-
-                if (snap != null) {
-                    JOptionPane.showMessageDialog(frame,
-                        "Table created!\nTable ID: " + snap.getTableId(),
-                        "Success",
-                        JOptionPane.INFORMATION_MESSAGE
-                    );
-
-                    // Automatically join the newly created table
-                    displayTable(snap);
-
-                } else {
-                    JOptionPane.showMessageDialog(frame,
-                        "Failed to create table.",
-                        "Error",
-                        JOptionPane.ERROR_MESSAGE
-                    );
-                }
-            }
-        });
-
-
-        
-        JPanel buttonPanel = new JPanel();
-        buttonPanel.setOpaque(false);
-        buttonPanel.add(joinBtn);
-        buttonPanel.add(refreshBtn);
-        buttonPanel.add(logoutBtn);
-        buttonPanel.add(createTableBtn);
-
-        
-        rootPanel.add(title, BorderLayout.NORTH);
-        rootPanel.add(new JScrollPane(tableList), BorderLayout.CENTER);
-        rootPanel.add(buttonPanel, BorderLayout.SOUTH);
-        
-        rootPanel.revalidate();
-        rootPanel.repaint();
-    }
-
-    // Add this helper method for testing
-    private void displayDemoTable() {
-        // For demo, create a simple fake TableSnapshot
-        // You can copy the test code from MainApp here
-        // For now, just show a message
-        JOptionPane.showMessageDialog(frame, 
-            "Joining table (demo mode)\n\nThe game table would appear here.", 
-            "Demo", 
-            JOptionPane.INFORMATION_MESSAGE);
+    /** Get current screen name */
+    public String getCurrentScreen() {
+        return currentScreen;
     }
 }
