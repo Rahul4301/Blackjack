@@ -3,7 +3,6 @@ import Enums.BetStatus;
 
 public class Bet {
     private double amount;
-    private double payoutMultiplier;
     private boolean settled;
     private BetStatus outcome;
     private Player player;
@@ -11,7 +10,6 @@ public class Bet {
     public Bet(Player player, double amount) {
         this.player = player;
         this.amount = amount;
-        this.payoutMultiplier = 1.0;
         this.settled = false;
         this.outcome = BetStatus.PENDING;
         
