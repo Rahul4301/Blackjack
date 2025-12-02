@@ -76,17 +76,17 @@ public class GameTable {
         }
     }
 
-    public synchronized boolean handlePlayerAction(String playerID, PlayerAction action){
+    public synchronized boolean handlePlayerAction(String playerUsername, PlayerAction action){
         if (state != GameState.IN_PROGRESS) return false;
         if (players.isEmpty()) return false;
 
         Player currentPlayer = players.get(currentPlayerIndex);
-        if(!currentPlayer.getID().equalsIgnoreCase(playerID)) return false; //not this players turn
+        if (!currentPlayer.getUsername().equalsIgnoreCase(playerUsername)) return false; // not this player's turn
 
         switch(action) {
             case HIT:
                 currentPlayer.hit(shoe.dealCard());
-                if(currentPlayer.getHandValue() > 21){
+                if (currentPlayer.getHandValue() > 21){
                     advanceTurn();
                 }
                 break;
@@ -102,6 +102,7 @@ public class GameTable {
 
         return true;
     }
+
 
     public void evaluateHands(){
         int dealerValue = dealer.getHandValue();
@@ -171,16 +172,17 @@ public class GameTable {
         return players;
     }
 
-    public String getCurrentPlayerID() {
-        // No "current player" once the betting round is over
+    public String getCurrentPlayerUsername() {
         if (state != GameState.IN_PROGRESS) {
             return null;
         }
         if (currentPlayerIndex < 0 || currentPlayerIndex >= players.size()) {
             return null;
         }
-        return players.get(currentPlayerIndex).getID();
+        return players.get(currentPlayerIndex).getUsername();
     }
+
+
 
 
     public void resetTable(){
@@ -208,21 +210,37 @@ public class GameTable {
     //After each successful handlePlayerAction()
     //and After runDealerAndFinishRound()
 
-    public TableSnapshot createSnapshotFor(String requestingPlayerID) {
+   public TableSnapshot createSnapshotFor(String requestingPlayerUsername) {
         DealerView dealerView = buildDealerView();
         List<PlayerView> playerViews = new ArrayList<>();
 
-        String currentPlayerID = getCurrentPlayerID();
+        // This will now be the current player's USERNAME
+        String currentPlayerUsername = getCurrentPlayerID();
 
         for (Player p : players) {
-            boolean isYou = p.getID().equalsIgnoreCase(requestingPlayerID);
-            boolean isYourTurn = p.getID().equalsIgnoreCase(currentPlayerID);
+            boolean isYou = requestingPlayerUsername != null
+                    && p.getUsername().equalsIgnoreCase(requestingPlayerUsername);
+            boolean isYourTurn = currentPlayerUsername != null
+                    && p.getUsername().equalsIgnoreCase(currentPlayerUsername);
 
             playerViews.add(buildPlayerView(p, isYou, isYourTurn));
         }
 
-        return new TableSnapshot(tableID, state, currentPlayerID, dealerView, playerViews);
+        // currentPlayerId field in TableSnapshot will now actually hold a username
+        return new TableSnapshot(tableID, state, currentPlayerUsername, dealerView, playerViews);
     }
+
+    public String getCurrentPlayerID() {
+        // No "current player" once the betting round is over
+        if (state != GameState.IN_PROGRESS) {
+            return null;
+        }
+        if (currentPlayerIndex < 0 || currentPlayerIndex >= players.size()) {
+            return null;
+        }
+        // Use username instead of internal ID
+        return players.get(currentPlayerIndex).getUsername();
+}
 
 
     //handlePlayerAction helpers
@@ -297,7 +315,8 @@ public class GameTable {
         boolean active = true; // you can refine this later
 
         return new PlayerView(
-                player.getID(),
+                // "playerId" in the view now stores username too
+                player.getUsername(),
                 player.getUsername(),
                 betAmount,
                 handValue,
@@ -307,6 +326,7 @@ public class GameTable {
                 cardViews
         );
     }
+
 
 
 

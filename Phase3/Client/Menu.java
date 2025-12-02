@@ -34,6 +34,15 @@ public class Menu {
         this.currentUser = null;
         this.menuHistory = new Stack<>();
     }
+    /*
+    
+    
+    MAIN MENU
+    
+    
+    
+    
+    */
 
     public void displayMainMenu() {
         navigateTo("MAIN");
@@ -41,12 +50,12 @@ public class Menu {
             options.clear();
             System.out.println("\n=== Blackjack Main Menu ===");
             if(isLoggedIn){ System.out.println("Welcome, " + currentUser + "!");}
-            System.out.println("1) Login");
-            System.out.println("2) Register");
+            System.out.println("1) Login"); //done
+            System.out.println("2) Register"); //done
             System.out.println("3) Lobby");
             System.out.println("4) Deposit");
-            System.out.println("5) Logout");
-            System.out.println("6) Exit");
+            System.out.println("5) Logout");//done
+            System.out.println("6) Exit");//done
             System.out.print("Select an option: ");
 
             int opt = readInt();
@@ -89,6 +98,8 @@ public class Menu {
         }
         goBack();
     }
+
+
 
     public void displayRegisterScreen(){
         navigateTo("REGISTER");
@@ -141,9 +152,19 @@ public class Menu {
         int opt = readInt();
         switch (opt) {
             case 1:
-                System.out.println("Requesting to join a table...");
-                // client.joinTable(...) // integrate with Client
+                System.out.print("Enter table ID to join: ");
+                String tableId = scanner.nextLine().trim();
+
+                TableSnapshot snap = client.joinTable(tableId);
+                if (snap != null) {
+                    System.out.println("Joined table " + snap.getTableId());
+                    client.displaySnapshot(snap);
+                    // enter player table screen if desired
+                } else {
+                    System.out.println("Failed to join table.");
+                }
                 break;
+
             case 2:
                 System.out.println("Leaving table (if joined)...");
                 break;
@@ -152,6 +173,8 @@ public class Menu {
                 break;
         }
     }
+
+
 
     public void displayDealerLobby() {
         if (!isLoggedIn) {
@@ -164,7 +187,7 @@ public class Menu {
             return;
         }
 
-        navigateTo("DEALER_LOBBY");
+        currentScreen = "DEALER_LOBBY";
         System.out.println("\n--- Dealer Lobby ---");
         System.out.println("Welcome, " + currentUser + "!");
         System.out.println("1) Create new table");
@@ -192,6 +215,7 @@ public class Menu {
                 break;
         }
         // remove the extra goBack() here, or you will pop one level
+        goBack();
     }
 
 
@@ -235,6 +259,7 @@ public class Menu {
                             // Here you can go into your table management loop
                             manageDealerTable(snap);
                         }
+                        goBack();
                         break;
                     case 2:
                         System.out.println("Requesting to leave current table...");
@@ -344,4 +369,6 @@ public class Menu {
             }
         }
     }
+
+    
 }

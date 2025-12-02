@@ -225,16 +225,48 @@ public class Client {
         );
     }
 
-    public static Message joinTable(String tableId) {
-        return new Message(
-                UUID.randomUUID().toString(),
-                MessageType.JOIN_TABLE,
-                clientUUID,
-                "SERVER",
-                tableId,
-                LocalDateTime.now()
-        );
+    public TableSnapshot joinTable(String tableId) {
+        try {
+            Message joinTableMsg = new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.JOIN_TABLE,
+                    clientUUID,
+                    "SERVER",
+                    tableId,
+                    LocalDateTime.now()
+            );
+
+            out.writeObject(joinTableMsg);
+            out.flush();
+
+            Message response = (Message) in.readObject();
+            System.out.println("Response to JOIN_TABLE: " + response.getMessageType());
+
+            if (response.getMessageType() == MessageType.ERROR) {
+                System.out.println("Server error on JOIN_TABLE: " + response.getPayload());
+                return null;
+            }
+
+            Object payload = response.getPayload();
+
+            if (response.getMessageType() == MessageType.OK && payload instanceof TableSnapshot snapshot) {
+                this.currentTableId = snapshot.getTableId();
+                this.currentSnapshot = snapshot;
+                return snapshot;
+            }
+
+            System.out.println(
+                    "Unexpected response to JOIN_TABLE: " +
+                    response.getMessageType() + " payload=" + payload
+            );
+            return null;
+
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error sending JOIN_TABLE: " + e.getMessage());
+            return null;
+        }
     }
+
 
     public static Message leaveTable() {
         return new Message(
@@ -261,7 +293,7 @@ public class Client {
         System.out.println();
         System.out.println("=== Table " + snap.getTableId() + " ===");
         System.out.println("State: " + snap.getState());
-        System.out.println("Current player id: " + snap.getCurrentPlayerId());
+        System.out.println("Current player: " + snap.getCurrentPlayerUsername());
 
         // Dealer view
         DealerView dv = snap.getDealer();
@@ -280,7 +312,10 @@ public class Client {
 
         // Each player
         for (PlayerView pv : snap.getPlayers()) {
-            System.out.print("Player " + pv.getUsername() + " (id " + pv.getPlayerId() + ")");
+            System.out.print("Player " + pv.getUsername());
+            if (pv.isYou()) {
+                System.out.print(" (YOU)");
+            }
             if (pv.isYourTurn()) {
                 System.out.print(" [TURN]");
             }
@@ -297,6 +332,45 @@ public class Client {
                             + " | active: " + pv.isActive());
         }
     }
+
+    public TableSnapshot requestTableState() {
+        try {
+            Message req = new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.REQUEST_TABLE_STATE,
+                    clientUUID,
+                    "SERVER",
+                    null,
+                    LocalDateTime.now()
+            );
+
+            out.writeObject(req);
+            out.flush();
+
+            Message response = (Message) in.readObject();
+
+            if (response.getMessageType() == MessageType.ERROR) {
+                System.out.println("Error requesting table state: " + response.getPayload());
+                return null;
+            }
+
+            Object payload = response.getPayload();
+            if (response.getMessageType() == MessageType.OK && payload instanceof TableSnapshot snapshot) {
+                // You can reuse your existing helper
+                handleTableSnapshot(snapshot);
+                return snapshot;
+            }
+
+            System.out.println("Unexpected response to REQUEST_TABLE_STATE: " + response);
+            return null;
+
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error in requestTableState: " + e.getMessage());
+            return null;
+        }
+    }
+
+
 
 
 

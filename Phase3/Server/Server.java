@@ -39,6 +39,7 @@ public class Server {
         private boolean connected;
         private final LoginManager manager;
         private Account account;
+        private GameTable table;
 
         // new - which table this connection is attached to, if any
         private GameTable currentTable;
@@ -52,6 +53,7 @@ public class Server {
             this.account = null;
             this.currentTable = null;
             this.currentTableId = null;
+            this.table = null;
         }
 
         @Override
@@ -82,18 +84,34 @@ public class Server {
             }
         }
 
+       /*
+
+
+
+
+       MAIN MESSAGE HANDLER
+       
+       
+       
+       
+       */
+        
+        
+        
+        
+
         private void handleMessage(Message msg) {
             System.out.println("[Server] Received from " + clientID + ": " + msg.getMessageType());
 
             switch (msg.getMessageType()) {
                 case LOGIN:
-                    handleLogin(msg);
+                    handleLogin(msg);//done
                     break;
                 case LOGOUT:
-                    handleLogout(msg);
+                    handleLogout(msg);//done
                     break;
                 case REGISTER:
-                    handleRegister(msg);
+                    handleRegister(msg);//done
                     break;
                 case BET_PLACED:
                     handleBetPlaced(msg);
@@ -111,13 +129,16 @@ public class Server {
                     handleRequestProfile(msg);
                     break;
                 case CREATE_TABLE:         
-                    handleCreateTable(msg);
+                    handleCreateTable(msg);//done (?)
                     break;
                 case LIST_TABLES:          
                     handleListTables(msg);
                     break;
+                case REQUEST_TABLE_STATE:
+                    handleRequestTableState(msg);
+                    break;
                 case EXIT:
-                    handleExit(msg);
+                    handleExit(msg); //done
                     break;
                 default:
                     System.out.println("[Server] Unhandled message type: " + msg.getMessageType());
@@ -210,6 +231,13 @@ public class Server {
        private void handleJoinTable(Message msg) {
             if (account == null) {
                 sendMessage(createErrorResponse(msg, "Not logged in"));
+
+                // after adding the player to the table
+                // Snapshot for this player (now keyed by username)
+                TableSnapshot snapshotForPlayer = table.createSnapshotFor(account.getUsername());
+                sendMessage(createOKResponse(msg, snapshotForPlayer));
+
+
                 return;
             }
 
@@ -244,13 +272,12 @@ public class Server {
             System.out.println("[Server] Player " + player.getUsername() + " joined table " + tableId);
 
             // Snapshot for this player
-            TableSnapshot snapshotForPlayer = table.createSnapshotFor(player.getID());
+            TableSnapshot snapshotForPlayer = table.createSnapshotFor(player.getUsername());
             sendMessage(createOKResponse(msg, snapshotForPlayer));
 
             // Notify everyone else at that table
             broadcastSnapshot(table);
         }
-
 
         private void handleLeaveTable(Message msg) {
             if (account == null) {
@@ -330,6 +357,30 @@ public class Server {
             sendMessage(createOKResponse(msg, snapshot));
         }
 
+        private void handleRequestTableState(Message msg) {
+            if (account == null) {
+                sendMessage(createErrorResponse(msg, "Not logged in"));
+                return;
+            }
+            if (currentTable == null) {
+                sendMessage(createErrorResponse(msg, "Not currently at a table"));
+                return;
+            }
+
+            GameTable table = currentTable;
+
+            TableSnapshot snapshot;
+            if (account instanceof Player p) {
+                snapshot = table.createSnapshotFor(p.getUsername());
+            } else {
+                // dealer or something else
+                snapshot = table.createSnapshotFor(null);
+            }
+
+            sendMessage(createOKResponse(msg, snapshot));
+        }
+
+
 
         private void handleExit(Message msg){
             
@@ -348,7 +399,8 @@ public class Server {
                 TableSnapshot snapshot;
 
                 if (handler.account instanceof Player p) {
-                    snapshot = table.createSnapshotFor(p.getID());
+                    // pass username here
+                    snapshot = table.createSnapshotFor(p.getUsername());
                 } else {
                     // Dealer or unknown, no "you" flag
                     snapshot = table.createSnapshotFor(null);
@@ -365,6 +417,7 @@ public class Server {
                 handler.sendMessage(snapshotMsg);
             }
         }
+
 
 
         public void sendMessage(Message msg) {

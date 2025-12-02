@@ -16,7 +16,8 @@ public enum MessageType {
     REQUEST_PROFILE,
     PLAYER_ACTION,
     EXIT,
-    CREATE_TABLE,     // new
-    LIST_TABLES,      // new
-    TABLE_SNAPSHOT    // new, server -> client snapshots
+    CREATE_TABLE,
+    LIST_TABLES,
+    TABLE_SNAPSHOT,
+    REQUEST_TABLE_STATE      // new
 }
