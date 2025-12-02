@@ -3,6 +3,7 @@ package Client;
 import Enums.MessageType;
 import Message.Message;
 import Server.Account;
+import Shared.TableSnapshot;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -156,6 +157,80 @@ public class Client {
             System.out.println("Error sending EXIT: " + e.getMessage());
         }
     }
+
+    //Table Functions
+
+    public void createTable() {
+        try{
+            Message createTableMsg =  new Message(
+                UUID.randomUUID().toString(),
+                MessageType.CREATE_TABLE,
+                clientUUID,
+                "SERVER",
+                null,
+                LocalDateTime.now()
+            );
+
+            out.writeObject(createTableMsg);
+            out.flush();
+
+
+        } catch (IOException e){
+            System.out.println("Error sending CREATE_TABLE: " + e.getMessage());
+        }
+    }
+
+    public void listTables() {
+        try{
+            Message createListTablesMsg = new Message(
+                UUID.randomUUID().toString(),
+                MessageType.LIST_TABLES,
+                clientUUID,
+                "SERVER",
+                null,
+                LocalDateTime.now()
+            );
+
+            out.writeObject(createListTablesMsg);
+            out.flush();
+        } catch (IOException e) {
+            System.out.println("Error sending LIST_TABLE: " + e.getMessage());
+        }
+        
+    }
+
+    public void joinTable(String tableId) {
+        try{
+            Message joinTableMsg =  new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.JOIN_TABLE,
+                    clientUUID,
+                    "SERVER",
+                    tableId,
+                    LocalDateTime.now()
+            );
+
+            out.writeObject(joinTableMsg);
+            out.flush();
+        } catch (IOException e) {
+            System.out.println("Error sending JOIN_TABLE: " + e.getMessage());
+        }
+
+    }
+
+    public static Message leaveTable() {
+        return new Message(
+                UUID.randomUUID().toString(),
+                MessageType.LEAVE_TABLE,
+                clientUUID,
+                "SERVER",
+                null,
+                LocalDateTime.now()
+        );
+    }
+
+    
+
 
     /* =========================
        Main entry point

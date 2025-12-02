@@ -41,7 +41,7 @@ public class Menu {
             if(isLoggedIn){ System.out.println("Welcome, " + currentUser + "!");}
             System.out.println("1) Login");
             System.out.println("2) Register");
-            System.out.println("3) Player Lobby");
+            System.out.println("3) Lobby");
             System.out.println("4) Deposit");
             System.out.println("5) Logout");
             System.out.println("6) Exit");
@@ -74,7 +74,12 @@ public class Menu {
             } else {
                 this.currentUser = username;
             }
-            this.userType = "player"; // or derive from Account if you have a type field
+
+            if (client.getAccount() instanceof Server.Dealer) {
+                userType = "DEALER";
+            } else {
+                userType = "PLAYER";
+            }
             System.out.println("Logged in as: " + currentUser);
         } else {
             System.out.println("Login failed.");
@@ -156,7 +161,8 @@ public class Menu {
                         displayRegisterScreen();
                         break;
                     case 3:
-                        displayPlayerLobby();
+                        if(userType.equalsIgnoreCase("DEALER")){ displayDealerLobby();}
+                        else {displayPlayerLobby();}
                         break;
                     case 4:
                         System.out.println("Deposit feature not implemented yet.");
@@ -173,6 +179,7 @@ public class Menu {
                 break;
             default:
                 System.out.println("Unhandled screen: " + currentScreen);
+                goBack();
         }
     }
 
@@ -225,4 +232,47 @@ public class Menu {
             }
         }
     }
+
+    //Dealer UI
+    public void displayDealerLobby() {
+            if (!isLoggedIn) {
+                System.out.println("Please login first.");
+                return;
+            }
+
+            if (!"dealer".equalsIgnoreCase(userType)) {
+                System.out.println("Dealer lobby is only for dealers.");
+                return;
+            }
+
+            navigateTo("DEALER_LOBBY");
+            System.out.println("\n--- Dealer Lobby ---");
+            System.out.println("Welcome, " + currentUser + "!");
+            System.out.println("1) Create new table");
+            System.out.println("2) Leave current table");
+            System.out.println("3) Back");
+            System.out.print("Select an option: ");
+
+            int opt = readInt();
+            switch (opt) {
+                case 1:
+                    System.out.println("Requesting to create a new table...");
+                    // send CREATE_TABLE and handle snapshot
+                    // Example if you use static Client:
+                    // out.writeObject(Client.createTable());
+                    // Message resp = (Message) in.readObject();
+                    // if OK and payload is TableSnapshot, call gui.displayTable(...)
+                    break;
+                case 2:
+                    System.out.println("Requesting to leave current table...");
+                    // send LEAVE_TABLE
+                    break;
+                default:
+                    goBack();
+                    break;
+            }
+
+            goBack();
+        }
+
 }

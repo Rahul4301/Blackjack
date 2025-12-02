@@ -118,23 +118,24 @@ public class LoginManager {
         }
         modified = true;
         System.out.println("Account created: " + username + " as " + type);
+        save();
         return newAccount;
     }
 
     // Convenience method for creating a Player account
-    public synchronized Account createPlayerAccount(String username, String password) {
-        for (Account account : accounts){
-            if (account.getUsername().equalsIgnoreCase(username)){
-                throw new IllegalArgumentException("Username already exists: " + username);
-            }
-        }
-        Player newPlayer = new Player(username, password, 1000);
-        accounts.add(newPlayer);
-        numAccounts++;
-        modified = true;
-        System.out.println("Player account created: " + username);
-        return newPlayer;
-    }
+    // public synchronized Account createPlayerAccount(String username, String password) {
+    //     for (Account account : accounts){
+    //         if (account.getUsername().equalsIgnoreCase(username)){
+    //             throw new IllegalArgumentException("Username already exists: " + username);
+    //         }
+    //     }
+    //     Player newPlayer = new Player(username, password, 1000);
+    //     accounts.add(newPlayer);
+    //     numAccounts++;
+    //     modified = true;
+    //     System.out.println("Player account created: " + username);
+    //     return newPlayer;
+    // }
 
     // Corrected login: removed unnecessary try-catch block and exception throwing.
     public synchronized Account login(String username, String password){
