@@ -3,6 +3,10 @@ package Client;
 import Enums.MessageType;
 import Message.Message;
 import Server.Account;
+import Shared.CardView;
+import Shared.DealerView;
+import Shared.PlayerView;
+import Shared.TableSnapshot;
 
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -20,6 +24,10 @@ public class Client {
     private final ObjectInputStream in;
 
     private Account account;
+    
+    private TableSnapshot currentSnapshot;
+    private String currentTableId;
+
 
     public Client(ObjectOutputStream out, ObjectInputStream in) {
         this.out = out;
@@ -159,15 +167,51 @@ public class Client {
 
 
     //Table Messages
-    public static Message createTable() {
-        return new Message(
+    // Table Messages
+    public TableSnapshot createTable() {
+        try {
+            Message createTableMsg = new Message(
                 UUID.randomUUID().toString(),
                 MessageType.CREATE_TABLE,
                 clientUUID,
                 "SERVER",
                 null,
                 LocalDateTime.now()
-        );
+            );
+
+            out.writeObject(createTableMsg);
+            out.flush();
+
+            Message response = (Message) in.readObject();
+            System.out.println("Response to CREATE_TABLE: " + response.getMessageType());
+
+            // Handle error first
+            if (response.getMessageType() == MessageType.ERROR) {
+                System.out.println("Server error on CREATE_TABLE: " + response.getPayload());
+                return null;
+            }
+
+            Object payload = response.getPayload();
+
+            // Server's handleCreateTable sends OK with a TableSnapshot payload
+            if (response.getMessageType() == MessageType.OK && payload instanceof TableSnapshot snapshot) {
+                // You can also store it in a field if you want
+                // this.currentTableId = snapshot.getTableId();
+                // this.currentSnapshot = snapshot;
+
+                return snapshot;
+            }
+
+            System.out.println(
+                "Unexpected response to CREATE_TABLE: " +
+                response.getMessageType() + " payload=" + payload
+            );
+            return null;
+
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error sending CREATE_TABLE: " + e.getMessage());
+            return null;
+        }
     }
 
     public static Message listTables() {
@@ -202,6 +246,59 @@ public class Client {
                 LocalDateTime.now()
         );
     }
+
+    //Snapshot helpers
+
+    public void handleTableSnapshot(TableSnapshot snapshot) {
+        this.currentSnapshot = snapshot;
+        this.currentTableId = snapshot.getTableId();
+
+        // For now, just print a simple view
+        displaySnapshot(snapshot);
+    }
+
+    public void displaySnapshot(TableSnapshot snap) {
+        System.out.println();
+        System.out.println("=== Table " + snap.getTableId() + " ===");
+        System.out.println("State: " + snap.getState());
+        System.out.println("Current player id: " + snap.getCurrentPlayerId());
+
+        // Dealer view
+        DealerView dv = snap.getDealer();
+        System.out.print("Dealer cards: ");
+        for (CardView cv : dv.getCards()) {
+            if (cv.isHidden()) {
+                System.out.print("[HIDDEN] ");
+            } else {
+                System.out.print(cv.getRank() + " of " + cv.getSuit() + " ");
+            }
+        }
+        if (dv.hasHiddenCard()) {
+            System.out.print("(has hidden card)");
+        }
+        System.out.println();
+
+        // Each player
+        for (PlayerView pv : snap.getPlayers()) {
+            System.out.print("Player " + pv.getUsername() + " (id " + pv.getPlayerId() + ")");
+            if (pv.isYourTurn()) {
+                System.out.print(" [TURN]");
+            }
+            System.out.println();
+
+            System.out.print("  Hand: ");
+            for (CardView cv : pv.getCards()) {
+                System.out.print(cv.getRank() + " of " + cv.getSuit() + " ");
+            }
+            System.out.println();
+
+            System.out.println("  Bet: " + pv.getBetAmount()
+                            + " | handValue: " + pv.getHandValue()
+                            + " | active: " + pv.isActive());
+        }
+    }
+
+
 
 
     /* =========================
