@@ -191,7 +191,6 @@ public class Client {
 
 
     //Table Messages
-    // Table Messages
     public TableSnapshot createTable() {
         try {
             Message createTableMsg = new Message(
@@ -253,6 +252,7 @@ public TableSnapshot joinTable(String tableId) {
         System.out.println(response.getPayload());
 
         if(response.getPayload() instanceof TableSnapshot tableSnapshot){
+            currentTableId = tableId;
             return tableSnapshot;
         }
         throw new ClassNotFoundException("No table snapshot returned from server!");
@@ -283,6 +283,10 @@ public void leaveTable() {
 
         Message response = (Message) in.readObject();
         System.out.println(response.getPayload());
+        if(response.getMessageType() == MessageType.OK && !currentTableId.isEmpty()){
+            currentTableId = null;
+            return;
+        }
 
     } catch (IOException | ClassNotFoundException e) {
         System.out.println("Error leaving table: " + e.getMessage());
@@ -397,7 +401,7 @@ public void sendPlayerAction(String action, GUI gui) {
         this.currentTableId = snapshot.getTableId();
 
         // For now, just print a simple view
-        displaySnapshot(snapshot);
+        //displaySnapshot(snapshot);
     }
 
     public void displaySnapshot(TableSnapshot snap) {

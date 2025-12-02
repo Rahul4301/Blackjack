@@ -145,7 +145,7 @@ public class Menu {
         System.out.println("\n--- Player Lobby ---");
         System.out.println("Welcome, " + currentUser + "!");
         System.out.println("1) Join Table");
-        System.out.println("2) Leave Table");
+        //System.out.println("2) Leave Table");
         System.out.println("3) Back");
         System.out.print("Select an option: ");
 
@@ -158,17 +158,18 @@ public class Menu {
                 TableSnapshot snap = client.joinTable(tableId);
                 if (snap != null) {
                     System.out.println("Joined table " + snap.getTableId());
-                    client.displaySnapshot(snap);
-                    // enter player table screen if desired
+                    managePlayerTable(snap);
+                    goBack();
+                    break;
                 } else {
                     System.out.println("Failed to join table.");
                 }
                 break;
 
-            case 2:
-                System.out.print("Leaving table (if joined)...");
-                client.leaveTable();
-                break;
+            // case 2:
+            //     System.out.print("Leaving table (if joined)...");
+            //     client.leaveTable();
+            //     break;
             default:
                 goBack();
                 break;
@@ -249,33 +250,6 @@ public class Menu {
                     default:
                         System.out.println("Invalid selection.");
                 }
-                break;
-
-            case "DEALER_LOBBY":
-                switch (option) {
-                    case 1:
-                        System.out.println("Requesting to create a new table...");
-                        var snap = client.createTable();
-                        if (snap != null) {
-                            // Here you can go into your table management loop
-                            manageDealerTable(snap);
-                        }
-                        goBack();
-                        break;
-                    case 2:
-                        System.out.println("Requesting to leave current table...");
-                        // client.leaveTable() when you implement it
-                        break;
-                    case 3:
-                        goBack();   // returns to previous screen, probably MAIN
-                        break;
-                    default:
-                        System.out.println("Invalid selection.");
-                }
-                break;
-
-            default:
-                System.out.println("Unhandled screen: " + currentScreen);
         }
     }
 
@@ -359,6 +333,42 @@ public class Menu {
             }
         }
     }
+
+    public void managePlayerTable(TableSnapshot snapshot) {
+        boolean playing = true;
+
+        while (playing) {
+            client.displaySnapshot(snapshot);
+
+            System.out.println("1) Hit");
+            System.out.println("2) Stand");
+            System.out.println("3) Refresh");
+            System.out.println("4) Leave table");
+            System.out.print("Select: ");
+
+            int choice = readInt();
+            switch(choice) {
+                case 1:
+                    //snapshot = client.playerHit(snapshot.getTableId());
+                    break;
+                case 2:
+                    //snapshot = client.playerStand(snapshot.getTableId());
+                    break;
+                case 3:
+                    snapshot = client.requestTableState();
+                    client.displaySnapshot(snapshot);
+                    break;
+                case 4:
+                    client.leaveTable();
+                    playing = false;
+                    break;
+                default:
+                    System.out.println("Not an option.");
+                    break;
+            }
+        }
+    }
+
 
     private int readInt() {
         while (true) {

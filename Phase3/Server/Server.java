@@ -237,7 +237,6 @@ public class Server {
                 TableSnapshot snapshotForPlayer = table.createSnapshotFor(account.getUsername());
                 sendMessage(createOKResponse(msg, snapshotForPlayer));
 
-
                 return;
             }
 
@@ -275,8 +274,6 @@ public class Server {
             TableSnapshot snapshotForPlayer = table.createSnapshotFor(player.getUsername());
             sendMessage(createOKResponse(msg, snapshotForPlayer));
 
-            // Notify everyone else at that table
-            broadcastSnapshot(table);
         }
 
         private void handleLeaveTable(Message msg) {
@@ -317,7 +314,7 @@ public class Server {
 
             // Notify remaining clients at that table
             if (tables.containsKey(tableId)) {
-                broadcastSnapshot(table);
+                //broadcastSnapshot(table);
             }
         }
 
@@ -388,35 +385,35 @@ public class Server {
             connected = false;
         }
 
-        private void broadcastSnapshot(GameTable table) {
-            String tableId = table.getTableID();
-            List<ClientHandler> list = tableClients.get(tableId);
-            if (list == null || list.isEmpty()) {
-                return;
-            }
+        // private void broadcastSnapshot(GameTable table) {
+        //     String tableId = table.getTableID();
+        //     List<ClientHandler> list = tableClients.get(tableId);
+        //     if (list == null || list.isEmpty()) {
+        //         return;
+        //     }
 
-            for (ClientHandler handler : list) {
-                TableSnapshot snapshot;
+        //     for (ClientHandler handler : list) {
+        //         TableSnapshot snapshot;
 
-                if (handler.account instanceof Player p) {
-                    // pass username here
-                    snapshot = table.createSnapshotFor(p.getUsername());
-                } else {
-                    // Dealer or unknown, no "you" flag
-                    snapshot = table.createSnapshotFor(null);
-                }
+        //         if (handler.account instanceof Player p) {
+        //             // pass username here
+        //             snapshot = table.createSnapshotFor(p.getUsername());
+        //         } else {
+        //             // Dealer or unknown, no "you" flag
+        //             snapshot = table.createSnapshotFor(null);
+        //         }
 
-                Message snapshotMsg = new Message(
-                        UUID.randomUUID().toString(),
-                        MessageType.TABLE_SNAPSHOT,
-                        "SERVER",
-                        handler.clientID,
-                        snapshot,
-                        java.time.LocalDateTime.now()
-                );
-                handler.sendMessage(snapshotMsg);
-            }
-        }
+        //         Message snapshotMsg = new Message(
+        //                 UUID.randomUUID().toString(),
+        //                 MessageType.TABLE_SNAPSHOT,
+        //                 "SERVER",
+        //                 handler.clientID,
+        //                 snapshot,
+        //                 java.time.LocalDateTime.now()
+        //         );
+        //         handler.sendMessage(snapshotMsg);
+        //     }
+        // }
 
 
 

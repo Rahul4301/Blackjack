@@ -36,16 +36,15 @@ public class GameTable {
         return false;
     }
 
-    public void removePlayer(Player person){
-        if(players.size() == 0){
+    public synchronized void removePlayer(Player person) {
+        if (players.isEmpty()) {
             System.err.println("Cannot remove player - Player size is already 0!");
+            return;
         }
-        for(Player player : players){
-            if(player.getID().equalsIgnoreCase(person.getID())){
-                players.remove(person);
-            }
-        }
+
+        players.removeIf(p -> p.getID().equalsIgnoreCase(person.getID()));
     }
+
 
     public void startRound(){
         if(state != GameState.BETTING) return;
