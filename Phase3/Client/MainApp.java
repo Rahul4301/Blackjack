@@ -79,7 +79,7 @@ public class MainApp {
             // If connection fails, demo mode
             JOptionPane.showMessageDialog(
                     null,
-                    "Could not connect to server.\nRunning in DEMO MODE.\n\nError: " + e.getMessage(),
+                    "Could not connect to server.\nCheck if server is on\n\nError: " + e.getMessage(),
                     "Connection Error",
                     JOptionPane.WARNING_MESSAGE
             );

@@ -1,5 +1,6 @@
 package Client;
 
+import Enums.PlayerAction;
 import Enums.Rank;
 import Enums.Suit;
 import Shared.CardView;
@@ -11,6 +12,8 @@ import java.util.List;
 import javax.swing.*;
 
 public class GUI {
+    private DefaultListModel<String> tableModel;
+    private JList<String> tableList;
 
     private JFrame frame;
     private JPanel rootPanel;
@@ -23,6 +26,8 @@ public class GUI {
     public GUI(Client client) {
         this.client = client;
         this.currentScreen = "LOGIN";
+        tableModel = new DefaultListModel<>();
+        tableList = new JList<>(tableModel);
         initFrame();
         showLoginScreen();
     }
@@ -41,12 +46,12 @@ public class GUI {
         frame.setContentPane(rootPanel);
         frame.setVisible(true);
     }
-
-    /** Public API: show a table snapshot (dealer + player hands) */
+    //show a table snapshot (dealer + player hands)
     public void displayTable(TableSnapshot snapshot) {
         currentScreen = "TABLE";
 
         rootPanel.removeAll();
+        rootPanel.setLayout(new BoxLayout(rootPanel, BoxLayout.Y_AXIS));
 
         // ---- Dealer row ----
         JLabel dealerLabel = new JLabel("Dealer");
@@ -57,11 +62,11 @@ public class GUI {
         DealerView dealerView = snapshot.getDealerView();
         JPanel dealerCardsPanel = buildCardsPanel(
                 dealerView != null ? dealerView.getCards() : List.of(),
-                true, // dealer row (respect hidden)
+                true,
                 dealerView != null && dealerView.hasHiddenCard()
         );
 
-        // ---- Player row (we try to find "you") ----
+        // ---- Player row ----
         PlayerView you = findYou(snapshot.getPlayers());
         String playerTitle = (you != null ? "You: " + you.getUsername() : "Player");
         JLabel playerLabel = new JLabel(playerTitle);
@@ -84,9 +89,10 @@ public class GUI {
         rootPanel.add(playerLabel);
         rootPanel.add(Box.createVerticalStrut(10));
         rootPanel.add(playerCardsPanel);
-        // --- Leave Table + Back to Lobby buttons ---
 
-        
+        // ======================================================================
+        // >>> LEAVE TABLE + BACK TO LOBBY <<<
+        // ======================================================================
         JPanel controlRow = new JPanel();
         controlRow.setOpaque(false);
 
@@ -106,11 +112,102 @@ public class GUI {
 
         rootPanel.add(Box.createVerticalStrut(20));
         rootPanel.add(controlRow);
-        rootPanel.add(Box.createVerticalGlue());
 
+        // ======================================================================
+        // >>> PLAYER ACTION BUTTONS (Hit, Stand, Double, Bet) <<<
+        // ======================================================================
+        JPanel playerActions = new JPanel();
+        playerActions.setOpaque(false);
+
+        JButton hitBtn = new JButton("Hit");
+        JButton standBtn = new JButton("Stand");
+        JButton doubleBtn = new JButton("Double");
+        JButton betBtn = new JButton("Bet");
+
+        // Add to panel
+        playerActions.add(hitBtn);
+        playerActions.add(standBtn);
+        playerActions.add(doubleBtn);
+        playerActions.add(betBtn);
+
+        // Add panel to GUI
+        rootPanel.add(Box.createVerticalStrut(15));
+        rootPanel.add(playerActions);
+
+        // ---- BUTTON HANDLERS ----
+        // ---- BUTTON HANDLERS ----
+        // ---- BUTTON HANDLERS ----
+
+        hitBtn.addActionListener(e -> {
+            if (client != null) {
+                TableSnapshot updated = client.sendPlayerAction(PlayerAction.HIT);
+                if (updated != null) {
+                    displayTable(updated);
+                }
+            }
+        });
+
+        standBtn.addActionListener(e -> {
+            if (client != null) {
+                TableSnapshot updated = client.sendPlayerAction(PlayerAction.STAND);
+                if (updated != null) {
+                    displayTable(updated);
+                }
+            }
+        });
+
+        doubleBtn.addActionListener(e -> {
+            if (client != null) {
+                TableSnapshot updated = client.sendPlayerAction(PlayerAction.DOUBLE);
+                if (updated != null) {
+                    displayTable(updated);
+                }
+            }
+        });
+
+
+        betBtn.addActionListener(e -> {
+            String amtStr = JOptionPane.showInputDialog(frame, "Enter bet amount:");
+            try {
+                double amt = Double.parseDouble(amtStr);
+                if (client != null) {
+                    client.placeBet(amt);
+                }
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(frame, "Invalid bet");
+            }
+        });
+
+        // ======================================================================
+        // >>> DEALER ACTION BUTTON (Start Round) — ONLY IF THIS USER IS DEALER <<<
+        // ======================================================================
+        if (client != null && client.isDealer()) {
+
+            JPanel dealerActions = new JPanel();
+            dealerActions.setOpaque(false);
+
+            JButton startRoundBtn = new JButton("Start Round");
+            dealerActions.add(startRoundBtn);
+
+            startRoundBtn.addActionListener(e -> {
+                if (client != null) {
+                    client.startRound();
+                }
+            });
+
+            rootPanel.add(Box.createVerticalStrut(15));
+            rootPanel.add(dealerActions);
+        }
+
+        // ======================================================================
+        // END BUTTON INSERTION
+        // ======================================================================
+
+        rootPanel.add(Box.createVerticalGlue());
         rootPanel.revalidate();
         rootPanel.repaint();
     }
+
 
     /** Build a horizontal panel of card labels */
     private JPanel buildCardsPanel(List cards, boolean dealerRow, boolean dealerHasHidden) {
@@ -300,14 +397,37 @@ public class GUI {
         title.setFont(new Font("Arial", Font.BOLD, 24));
         title.setForeground(Color.WHITE);
         
-        // Table list (would be populated from server)
-        DefaultListModel<String> tableModel = new DefaultListModel<>();
-        tableModel.addElement("Table T1 - 0/7 players");
-        tableModel.addElement("Table T2 - 3/7 players");
-        tableModel.addElement("Table T3 - 7/7 players (Full)");
-        
-        JList<String> tableList = new JList<>(tableModel);
-        tableList.setBackground(new Color(220, 220, 220));
+        // --- Populate table list from server ---
+        if (tableModel == null) {
+            tableModel = new DefaultListModel<>();
+        }
+        tableModel.clear();
+
+        // Fetch real tables from server
+        if (client != null && client.isLoggedIn()) {
+            java.util.List<String> tables = client.requestTableList();  // <--- NEW
+
+            if (tables != null) {
+                for (String tableID : tables) {
+                    tableModel.addElement("Table " + tableID);
+                }
+            } else {
+                tableModel.addElement("No tables found");
+            }
+
+        } else {
+            // Demo mode
+            tableModel.addElement("Table T1");
+        }
+
+        if (tableList == null) {
+            tableList = new JList<>(tableModel);
+            tableList.setBackground(new Color(220, 220, 220));
+        } else {
+            tableList.setModel(tableModel);
+        }
+
+
         
         JButton joinBtn = new JButton("Join Selected Table");
         JButton refreshBtn = new JButton("Refresh");
@@ -315,39 +435,35 @@ public class GUI {
         JButton createTableBtn = new JButton("Create Table");
 
         // Add action listeners
-        joinBtn.addActionListener(e -> {
+       joinBtn.addActionListener(e -> {
             int index = tableList.getSelectedIndex();
             if (index >= 0) {
                 String selected = tableModel.getElementAt(index);
-                // Extract table ID like "T1" from "Table T1 - 0/7 players"
                 String tableId = selected.split(" ")[1];
-                
+
                 if (client != null) {
-                    client.joinTable(tableId);
-                    // The joinTable method should call displayTable() when successful
-                } else {
-                    // For testing without client, show a demo table
-                    displayDemoTable();
+                    TableSnapshot snap = client.joinTable(tableId);
+                    if (snap != null) displayTable(snap);
                 }
             } else {
-                JOptionPane.showMessageDialog(frame, 
-                    "Please select a table first", 
-                    "Warning", 
-                    JOptionPane.WARNING_MESSAGE);
+                JOptionPane.showMessageDialog(frame, "Please select a table first");
             }
         });
+
         
         refreshBtn.addActionListener(e -> {
-            if (client != null) {
-                client.listTables();
-                // This should update the table list
-            } else {
-                JOptionPane.showMessageDialog(frame, 
-                    "Refreshing table list...", 
-                    "Info", 
-                    JOptionPane.INFORMATION_MESSAGE);
+        if (client != null) {
+            java.util.List<String> tables = client.requestTableList();
+
+            tableModel.clear();
+            if (tables != null) {
+                for (String t : tables) {
+                    tableModel.addElement("Table " + t);
+                }
             }
-        });
+        }
+    });
+
         
         logoutBtn.addActionListener(e -> {
             if (client != null) {

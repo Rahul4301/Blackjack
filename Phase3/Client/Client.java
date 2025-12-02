@@ -550,6 +550,44 @@ public void leaveTable() {
         
     }
 
+    public java.util.List<String> requestTableList() {
+        try {
+            Message listMsg = new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.LIST_TABLES,
+                    clientUUID,
+                    "SERVER",
+                    null,
+                    LocalDateTime.now()
+            );
+
+            sendMessage(listMsg);
+
+            Message response = (Message) in.readObject();
+
+            if (response.getMessageType() == MessageType.OK &&
+                response.getPayload() instanceof java.util.List<?> rawList) {
+
+                java.util.List<String> result = new java.util.ArrayList<>();
+
+                for (Object o : rawList) {
+                    if (o instanceof String s) {
+                        result.add(s);
+                    }
+                }
+
+                return result;
+            }
+
+            return null;
+
+        } catch (Exception e) {
+            System.out.println("Error requesting table list: " + e.getMessage());
+            return null;
+        }
+    }
+
+
     public String getUsername(){
         return account.getUsername();
     }
