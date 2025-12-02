@@ -2,9 +2,15 @@ package Server;
 
 import Enums.MessageType;
 import Message.Message;
+import Shared.TableSnapshot;
+
 import java.io.*;
 import java.net.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
@@ -15,6 +21,12 @@ import java.util.concurrent.Executors;
 public class Server {
     private static LoginManager manager;
     private static final int MAX_THREADS = 100;
+
+    // Tables by ID
+    private static final Map<String, GameTable> tables = new ConcurrentHashMap<>();
+
+    // For each table ID, which client handlers are attached (dealer + players)
+    private static final Map<String, List<ClientHandler>> tableClients = new ConcurrentHashMap<>();
 
     public static void main(String[] args) {
         manager = new LoginManager();
@@ -66,12 +78,18 @@ public class Server {
         private final LoginManager manager;
         private Account account;
 
+        // new - which table this connection is attached to, if any
+        private GameTable currentTable;
+        private String currentTableId;
+
         public ClientHandler(Socket socket, LoginManager manager) {
             this.socket = socket;
             this.manager = manager;
             this.clientID = UUID.randomUUID().toString();
             this.connected = false;
             this.account = null;
+            this.currentTable = null;
+            this.currentTableId = null;
         }
 
         @Override
@@ -129,6 +147,13 @@ public class Server {
                     break;
                 case REQUEST_PROFILE:
                     handleRequestProfile(msg);
+                    break;
+
+                case CREATE_TABLE:         // new
+                    handleCreateTable(msg);
+                    break;
+                case LIST_TABLES:          // new
+                    handleListTables(msg);
                     break;
                 case EXIT:
                     handleExit(msg);
@@ -221,20 +246,91 @@ public class Server {
             sendMessage(createOKResponse(msg, "Action received"));
         }
 
-        private void handleJoinTable(Message msg) {
+       private void handleJoinTable(Message msg) {
             if (account == null) {
                 sendMessage(createErrorResponse(msg, "Not logged in"));
                 return;
             }
-            sendMessage(createOKResponse(msg, "Joined table"));
+
+            if (!(account instanceof Player player)) {
+                sendMessage(createErrorResponse(msg, "Only players can join tables"));
+                return;
+            }
+
+            if (!(msg.getPayload() instanceof String)) {
+                sendMessage(createErrorResponse(msg, "Expected table ID as payload"));
+                return;
+            }
+
+            String tableId = (String) msg.getPayload();
+            GameTable table = tables.get(tableId);
+            if (table == null) {
+                sendMessage(createErrorResponse(msg, "Unknown table: " + tableId));
+                return;
+            }
+
+            boolean added = table.addPlayer(player);
+            if (!added) {
+                sendMessage(createErrorResponse(msg, "Table is full"));
+                return;
+            }
+
+            // Track attachment
+            currentTable = table;
+            currentTableId = tableId;
+            tableClients.computeIfAbsent(tableId, k -> new ArrayList<>()).add(this);
+
+            System.out.println("[Server] Player " + player.getUsername() + " joined table " + tableId);
+
+            // Snapshot for this player
+            TableSnapshot snapshotForPlayer = table.createSnapshotFor(player.getID());
+            sendMessage(createOKResponse(msg, snapshotForPlayer));
+
+            // Notify everyone else at that table
+            broadcastSnapshot(table);
         }
+
 
         private void handleLeaveTable(Message msg) {
             if (account == null) {
                 sendMessage(createErrorResponse(msg, "Not logged in"));
                 return;
             }
+
+            if (currentTable == null || currentTableId == null) {
+                sendMessage(createErrorResponse(msg, "Not currently at a table"));
+                return;
+            }
+
+            GameTable table = currentTable;
+            String tableId = currentTableId;
+
+            // Remove this handler from subscribers
+            List<ClientHandler> list = tableClients.get(tableId);
+            if (list != null) {
+                list.remove(this);
+                if (list.isEmpty()) {
+                    tableClients.remove(tableId);
+                }
+            }
+
+            if (account instanceof Player player) {
+                table.removePlayer(player);
+                System.out.println("[Server] Player " + player.getUsername() + " left table " + tableId);
+            } else if (account instanceof Dealer dealer) {
+                // Dealer leaves - for now, just log it
+                System.out.println("[Server] Dealer " + dealer.getUsername() + " detached from table " + tableId);
+            }
+
+            currentTable = null;
+            currentTableId = null;
+
             sendMessage(createOKResponse(msg, "Left table"));
+
+            // Notify remaining clients at that table
+            if (tables.containsKey(tableId)) {
+                broadcastSnapshot(table);
+            }
         }
 
         private void handleRequestProfile(Message msg) {
@@ -245,11 +341,70 @@ public class Server {
             sendMessage(createOKResponse(msg, "Profile retrieved"));
         }
 
+        private void handleCreateTable(Message msg) {
+            if (account == null) {
+                sendMessage(createErrorResponse(msg, "Not logged in"));
+                return;
+            }
+
+            if (!(account instanceof Dealer dealer)) {
+                sendMessage(createErrorResponse(msg, "Only dealers can create tables"));
+                return;
+            }
+
+            // Create a new table for this dealer
+            GameTable table = new GameTable(dealer);
+            String tableId = table.getTableID();
+            tables.put(tableId, table);
+
+            // Attach this connection to the table
+            currentTable = table;
+            currentTableId = tableId;
+            tableClients.computeIfAbsent(tableId, k -> new ArrayList<>()).add(this);
+
+            // Initial snapshot for dealer (no "you" flag, so pass null as player id)
+            TableSnapshot snapshot = table.createSnapshotFor(null);
+
+            System.out.println("[Server] Dealer " + dealer.getUsername() + " created table " + tableId);
+            sendMessage(createOKResponse(msg, snapshot));
+        }
+
+
         private void handleExit(Message msg){
             
             sendMessage(createOKResponse(msg, "See you next time!"));
             connected = false;
         }
+
+        private void broadcastSnapshot(GameTable table) {
+            String tableId = table.getTableID();
+            List<ClientHandler> list = tableClients.get(tableId);
+            if (list == null || list.isEmpty()) {
+                return;
+            }
+
+            for (ClientHandler handler : list) {
+                TableSnapshot snapshot;
+
+                if (handler.account instanceof Player p) {
+                    snapshot = table.createSnapshotFor(p.getID());
+                } else {
+                    // Dealer or unknown, no "you" flag
+                    snapshot = table.createSnapshotFor(null);
+                }
+
+                Message snapshotMsg = new Message(
+                        UUID.randomUUID().toString(),
+                        MessageType.TABLE_SNAPSHOT,
+                        "SERVER",
+                        handler.clientID,
+                        snapshot,
+                        java.time.LocalDateTime.now()
+                );
+                handler.sendMessage(snapshotMsg);
+            }
+        }
+
 
         public void sendMessage(Message msg) {
             if (!connected || out == null) {
@@ -268,6 +423,23 @@ public class Server {
                 connected = false;
             }
         }
+
+        
+
+        private void handleListTables(Message msg) {
+            if (account == null) {
+                sendMessage(createErrorResponse(msg, "Not logged in"));
+                return;
+            }
+
+            List<String> ids = new ArrayList<>();
+            for (GameTable t : tables.values()) {
+                ids.add(t.getTableID());
+            }
+
+            sendMessage(createOKResponse(msg, ids));
+        }
+
 
         public Account getAccount() {
             return account;

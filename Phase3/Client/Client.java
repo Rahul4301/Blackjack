@@ -157,6 +157,53 @@ public class Client {
         }
     }
 
+
+    //Table Messages
+    public static Message createTable() {
+        return new Message(
+                UUID.randomUUID().toString(),
+                MessageType.CREATE_TABLE,
+                clientUUID,
+                "SERVER",
+                null,
+                LocalDateTime.now()
+        );
+    }
+
+    public static Message listTables() {
+        return new Message(
+                UUID.randomUUID().toString(),
+                MessageType.LIST_TABLES,
+                clientUUID,
+                "SERVER",
+                null,
+                LocalDateTime.now()
+        );
+    }
+
+    public static Message joinTable(String tableId) {
+        return new Message(
+                UUID.randomUUID().toString(),
+                MessageType.JOIN_TABLE,
+                clientUUID,
+                "SERVER",
+                tableId,
+                LocalDateTime.now()
+        );
+    }
+
+    public static Message leaveTable() {
+        return new Message(
+                UUID.randomUUID().toString(),
+                MessageType.LEAVE_TABLE,
+                clientUUID,
+                "SERVER",
+                null,
+                LocalDateTime.now()
+        );
+    }
+
+
     /* =========================
        Main entry point
        ========================= */
