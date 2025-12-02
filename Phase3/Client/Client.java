@@ -19,7 +19,7 @@ public class Client {
 
     private final ObjectOutputStream out;
     private final ObjectInputStream in;
-    private GUI gui;
+    private boolean connected;
 
     private Account account;
 
@@ -31,17 +31,14 @@ public class Client {
     public boolean isLoggedIn() {
         return account != null;
     }
+    public boolean isConnected() {
+        return connected && out != null;
+    }
 
     public Account getAccount() {
         return account;
     }
-    public void setGUI(GUI gui) {
-        this.gui = gui;
-    }
 
-    public GUI getGUI(){
-        return gui;
-    }
     /* =========================
        Client <-> Server actions
        ========================= */
@@ -142,7 +139,20 @@ public class Client {
             System.out.println("Error during logout: " + e.getMessage());
         }
     }
-
+        public void sendMessage(Message msg) {
+            try {
+                if (out != null) {
+                    out.writeObject(msg);
+                    out.flush();
+                    System.out.println("[Client] Sent: " + msg.getMessageType());
+                } else {
+                    System.err.println("[Client] Cannot send message: output stream is null");
+                }
+            } catch (IOException e) {
+                System.err.println("[Client] Error sending message: " + e.getMessage());
+                // Handle disconnect
+            }
+        }
     public void sendExit() {
         try {
             Message exitMsg = new Message(
@@ -206,56 +216,17 @@ public void createTable() {
 }
 
 public void joinTable(String tableId) {
-    if (!isLoggedIn()) {
-        System.out.println("Must be logged in to join table");
-        return;
-    }
-
-    try {
-        Message joinMsg = new Message(
-                UUID.randomUUID().toString(),
-                MessageType.JOIN_TABLE,
-                clientUUID,
-                "SERVER",
-                tableId,
-                LocalDateTime.now()
-        );
-
-        out.writeObject(joinMsg);
-        out.flush();
-
-        Message response = (Message) in.readObject();
-        
-        if (response.getMessageType() == MessageType.OK) {
-            if (response.getPayload() instanceof Shared.TableSnapshot snapshot) {
-                System.out.println("✓ Joined table " + tableId);
-                
-                // Use existing GUI if available, otherwise create new
-                if (gui != null) {
-                    gui.displayTable(snapshot);
-                    System.out.println("Updated existing GUI!");
-                } else {
-                    // Create new GUI (for backward compatibility)
-                    GUI newGUI = new GUI(this);  // Pass this client
-                    newGUI.displayTable(snapshot);
-                    this.gui = newGUI;  // Store reference
-                    System.out.println("GUI window opened!");
-                }
-            }
-        } else if (response.getMessageType() == MessageType.ERROR) {
-            System.out.println("✗ Error: " + response.getPayload());
-            if (gui != null) {
-                gui.displayError((String) response.getPayload());
-            }
-        }
-
-    } catch (IOException | ClassNotFoundException e) {
-        System.out.println("Error joining table: " + e.getMessage());
-        if (gui != null) {
-            gui.displayError("Error joining table: " + e.getMessage());
-        }
-    }
+    Message joinMsg = new Message(
+        UUID.randomUUID().toString(),
+        MessageType.JOIN_TABLE,
+        "CLIENT",
+        "SERVER",
+        tableId,  // The table ID to join
+        LocalDateTime.now()
+    );
+    sendMessage(joinMsg);
 }
+
 public void leaveTable() {
     if (!isLoggedIn()) {
         System.out.println("Must be logged in");
