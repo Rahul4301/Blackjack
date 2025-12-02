@@ -27,4 +27,12 @@ public abstract class Account implements Serializable, IUser {
     public boolean isSessionActive() {
         return sessionActive;
     }
+    public String getAccountType() {
+    if (this instanceof Player) {
+        return "PLAYER";
+    } else if (this instanceof Dealer) {
+        return "DEALER";
+    }
+    return "UNKNOWN";
+}
 }

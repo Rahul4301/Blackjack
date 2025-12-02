@@ -15,10 +15,16 @@ public class GUI {
     private JFrame frame;
     private JPanel rootPanel;
     private String currentScreen;
+    private Client client;
 
     public GUI() {
-        this.currentScreen = "TABLE";
+        this(null);
+    }
+    public GUI(Client client) {
+        this.client = client;
+        this.currentScreen = "LOGIN";
         initFrame();
+        showLoginScreen();
     }
 
     /** Window setup */
@@ -106,7 +112,6 @@ public class GUI {
         return panel;
     }
 
-    /** Visual representation of a single card */
     private JLabel createCardLabel(CardView card, boolean hidden) {
         String text;
         if (hidden) {
@@ -125,17 +130,14 @@ public class GUI {
         return label;
     }
 
-    /** Try to find the PlayerView that represents "you" */
     private PlayerView findYou(List players) {
         if (players == null) return null;
 
-        // 1) prefer the one marked as "you"
         for (Object o : players) {
             if (o instanceof PlayerView pv && pv.isYou()) {
                 return pv;
             }
         }
-        // 2) otherwise just return first one, if any
         for (Object o : players) {
             if (o instanceof PlayerView pv) {
                 return pv;
@@ -144,7 +146,6 @@ public class GUI {
         return null;
     }
 
-    // Helpers to make nice text for ranks/suits
     private String rankToString(Rank rank) {
         if (rank == null) return "?";
         return switch (rank) {
@@ -174,23 +175,11 @@ public class GUI {
         };
     }
 
-    // You can keep or expand these later if you want
-    public void displayLoginScreen() {
-        currentScreen = "LOGIN";
-        JOptionPane.showMessageDialog(frame, "Login screen (not implemented yet)");
-    }
-
-    public void displayLobby() {
-        currentScreen = "LOBBY";
-        JOptionPane.showMessageDialog(frame, "Lobby screen (not implemented yet)");
-    }
-
     public void updateGameState() { /* hook up to server later */ }
 
     public void showPlayerOptions() { /* show buttons later */ }
 
     public void showDealerOptions() { /* dealer controls later */ }
-
 
     public void displayError(String message) {
         JOptionPane.showMessageDialog(frame, message, "Error", JOptionPane.ERROR_MESSAGE);
@@ -205,5 +194,167 @@ public class GUI {
             frame.dispose();
         }
         System.out.println("Shutting down GUI");
+    }
+
+    public void showLoginScreen() {
+        currentScreen = "LOGIN";
+        rootPanel.removeAll();
+        
+        JLabel title = new JLabel("Blackjack Login", SwingConstants.CENTER);
+        title.setFont(new Font("Arial", Font.BOLD, 24));
+        title.setForeground(Color.WHITE);
+        
+        JPanel loginPanel = new JPanel(new GridLayout(3, 2, 10, 10));
+        loginPanel.setOpaque(false);
+        
+        JTextField userField = new JTextField();
+        JPasswordField passField = new JPasswordField();
+        
+        loginPanel.add(new JLabel("Username:"));
+        loginPanel.add(userField);
+        loginPanel.add(new JLabel("Password:"));
+        loginPanel.add(passField);
+        
+        JButton loginBtn = new JButton("Login");
+        JButton registerBtn = new JButton("Register");
+        
+        loginBtn.addActionListener(e -> {
+            String username = userField.getText();
+            String password = new String(passField.getPassword());
+            
+            if (client != null && client.login(username, password)) {
+                showLobby();  // Go to lobby after successful login
+            } else {
+                // For testing without client
+                JOptionPane.showMessageDialog(frame, 
+                    "Login successful (demo mode)", 
+                    "Info", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                showLobby();  // Go to lobby anyway for testing
+            }
+        });
+        
+        registerBtn.addActionListener(e -> {
+            String username = userField.getText();
+            String password = new String(passField.getPassword());
+            
+            if (client != null) {
+                // Assuming "PLAYER" as default type
+                if (client.register(username, password, "PLAYER")) {
+                    showLobby();
+                }
+            } else {
+                JOptionPane.showMessageDialog(frame, 
+                    "Registration would happen here", 
+                    "Info", 
+                    JOptionPane.INFORMATION_MESSAGE);
+                showLobby();  // Go to lobby for testing
+            }
+        });
+        
+        loginPanel.add(loginBtn);
+        loginPanel.add(registerBtn);
+        
+        // Center everything
+        rootPanel.setLayout(new GridBagLayout());
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.gridwidth = GridBagConstraints.REMAINDER;
+        gbc.anchor = GridBagConstraints.CENTER;
+        
+        rootPanel.add(title, gbc);
+        rootPanel.add(Box.createVerticalStrut(20));
+        rootPanel.add(loginPanel, gbc);
+        
+        rootPanel.revalidate();
+        rootPanel.repaint();
+    }
+
+    public void showLobby() {
+        currentScreen = "LOBBY";
+        rootPanel.removeAll();
+        rootPanel.setLayout(new BorderLayout());
+        
+        JLabel title = new JLabel("Blackjack Lobby", SwingConstants.CENTER);
+        title.setFont(new Font("Arial", Font.BOLD, 24));
+        title.setForeground(Color.WHITE);
+        
+        // Table list (would be populated from server)
+        DefaultListModel<String> tableModel = new DefaultListModel<>();
+        tableModel.addElement("Table T1 - 0/7 players");
+        tableModel.addElement("Table T2 - 3/7 players");
+        tableModel.addElement("Table T3 - 7/7 players (Full)");
+        
+        JList<String> tableList = new JList<>(tableModel);
+        tableList.setBackground(new Color(220, 220, 220));
+        
+        JButton joinBtn = new JButton("Join Selected Table");
+        JButton refreshBtn = new JButton("Refresh");
+        JButton logoutBtn = new JButton("Logout");
+        
+        // Add action listeners
+        joinBtn.addActionListener(e -> {
+            int index = tableList.getSelectedIndex();
+            if (index >= 0) {
+                String selected = tableModel.getElementAt(index);
+                // Extract table ID like "T1" from "Table T1 - 0/7 players"
+                String tableId = selected.split(" ")[1];
+                
+                if (client != null) {
+                    client.joinTable(tableId);
+                    // The joinTable method should call displayTable() when successful
+                } else {
+                    // For testing without client, show a demo table
+                    displayDemoTable();
+                }
+            } else {
+                JOptionPane.showMessageDialog(frame, 
+                    "Please select a table first", 
+                    "Warning", 
+                    JOptionPane.WARNING_MESSAGE);
+            }
+        });
+        
+        refreshBtn.addActionListener(e -> {
+            if (client != null) {
+                client.listTables();
+                // This should update the table list
+            } else {
+                JOptionPane.showMessageDialog(frame, 
+                    "Refreshing table list...", 
+                    "Info", 
+                    JOptionPane.INFORMATION_MESSAGE);
+            }
+        });
+        
+        logoutBtn.addActionListener(e -> {
+            if (client != null) {
+                client.logout();
+            }
+            showLoginScreen();  // Go back to login
+        });
+        
+        JPanel buttonPanel = new JPanel();
+        buttonPanel.setOpaque(false);
+        buttonPanel.add(joinBtn);
+        buttonPanel.add(refreshBtn);
+        buttonPanel.add(logoutBtn);
+        
+        rootPanel.add(title, BorderLayout.NORTH);
+        rootPanel.add(new JScrollPane(tableList), BorderLayout.CENTER);
+        rootPanel.add(buttonPanel, BorderLayout.SOUTH);
+        
+        rootPanel.revalidate();
+        rootPanel.repaint();
+    }
+
+    // Add this helper method for testing
+    private void displayDemoTable() {
+        // For demo, create a simple fake TableSnapshot
+        // You can copy the test code from MainApp here
+        // For now, just show a message
+        JOptionPane.showMessageDialog(frame, 
+            "Joining table (demo mode)\n\nThe game table would appear here.", 
+            "Demo", 
+            JOptionPane.INFORMATION_MESSAGE);
     }
 }

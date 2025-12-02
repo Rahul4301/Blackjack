@@ -22,7 +22,8 @@ public class Client {
 
     private final ObjectOutputStream out;
     private final ObjectInputStream in;
-
+    private boolean connected;
+    private GUI gui;
     private Account account;
     
     private TableSnapshot currentSnapshot;
@@ -37,11 +38,20 @@ public class Client {
     public boolean isLoggedIn() {
         return account != null;
     }
+    public boolean isConnected() {
+        return connected && out != null;
+    }
 
     public Account getAccount() {
         return account;
     }
+    public void setGUI(GUI gui) {
+        this.gui = gui;
+    }
 
+    public GUI getGUI() {
+        return gui;
+    }
     /* =========================
        Client <-> Server actions
        ========================= */
@@ -142,7 +152,20 @@ public class Client {
             System.out.println("Error during logout: " + e.getMessage());
         }
     }
-
+        public void sendMessage(Message msg) {
+            try {
+                if (out != null) {
+                    out.writeObject(msg);
+                    out.flush();
+                    System.out.println("[Client] Sent: " + msg.getMessageType());
+                } else {
+                    System.err.println("[Client] Cannot send message: output stream is null");
+                }
+            } catch (IOException e) {
+                System.err.println("[Client] Error sending message: " + e.getMessage());
+                // Handle disconnect
+            }
+        }
     public void sendExit() {
         try {
             Message exitMsg = new Message(
@@ -212,64 +235,46 @@ public class Client {
             System.out.println("Error sending CREATE_TABLE: " + e.getMessage());
             return null;
         }
-    }
 
-    public static Message listTables() {
-        return new Message(
-                UUID.randomUUID().toString(),
-                MessageType.LIST_TABLES,
-                clientUUID,
-                "SERVER",
-                null,
-                LocalDateTime.now()
-        );
-    }
+        out.writeObject(createMsg);
+        out.flush();
 
-    public TableSnapshot joinTable(String tableId) {
-        try {
-            Message joinTableMsg = new Message(
-                    UUID.randomUUID().toString(),
-                    MessageType.JOIN_TABLE,
-                    clientUUID,
-                    "SERVER",
-                    tableId,
-                    LocalDateTime.now()
-            );
-
-            out.writeObject(joinTableMsg);
-            out.flush();
-
-            Message response = (Message) in.readObject();
-            System.out.println("Response to JOIN_TABLE: " + response.getMessageType());
-
-            if (response.getMessageType() == MessageType.ERROR) {
-                System.out.println("Server error on JOIN_TABLE: " + response.getPayload());
-                return null;
+        Message response = (Message) in.readObject();
+        
+        if (response.getMessageType() == MessageType.OK) {
+            System.out.println("✓ Table created!");
+            if (response.getPayload() instanceof Shared.TableSnapshot snapshot) {
+                System.out.println("Table ID: " + snapshot.getTableId());
             }
-
-            Object payload = response.getPayload();
-
-            if (response.getMessageType() == MessageType.OK && payload instanceof TableSnapshot snapshot) {
-                this.currentTableId = snapshot.getTableId();
-                this.currentSnapshot = snapshot;
-                return snapshot;
-            }
-
-            System.out.println(
-                    "Unexpected response to JOIN_TABLE: " +
-                    response.getMessageType() + " payload=" + payload
-            );
-            return null;
-
-        } catch (IOException | ClassNotFoundException e) {
-            System.out.println("Error sending JOIN_TABLE: " + e.getMessage());
-            return null;
+        } else {
+            System.out.println("✗ Error: " + response.getPayload());
         }
+
+    } catch (IOException | ClassNotFoundException e) {
+        System.out.println("Error creating table: " + e.getMessage());
+    }
+}
+
+public void joinTable(String tableId) {
+    Message joinMsg = new Message(
+        UUID.randomUUID().toString(),
+        MessageType.JOIN_TABLE,
+        "CLIENT",
+        "SERVER",
+        tableId,  // The table ID to join
+        LocalDateTime.now()
+    );
+    sendMessage(joinMsg);
+}
+
+public void leaveTable() {
+    if (!isLoggedIn()) {
+        System.out.println("Must be logged in");
+        return;
     }
 
-
-    public static Message leaveTable() {
-        return new Message(
+    try {
+        Message leaveMsg = new Message(
                 UUID.randomUUID().toString(),
                 MessageType.LEAVE_TABLE,
                 clientUUID,
@@ -277,7 +282,118 @@ public class Client {
                 null,
                 LocalDateTime.now()
         );
+
+        out.writeObject(leaveMsg);
+        out.flush();
+
+        Message response = (Message) in.readObject();
+        System.out.println(response.getPayload());
+
+    } catch (IOException | ClassNotFoundException e) {
+        System.out.println("Error leaving table: " + e.getMessage());
     }
+}
+
+public void listTables() {
+    if (!isLoggedIn()) {
+        System.out.println("Must be logged in");
+        return;
+    }
+
+    try {
+        Message listMsg = new Message(
+                UUID.randomUUID().toString(),
+                MessageType.LIST_TABLES,
+                clientUUID,
+                "SERVER",
+                null,
+                LocalDateTime.now()
+        );
+
+        out.writeObject(listMsg);
+        out.flush();
+
+        Message response = (Message) in.readObject();
+        
+        if (response.getPayload() instanceof java.util.List) {
+            @SuppressWarnings("unchecked")
+            java.util.List<String> tables = (java.util.List<String>) response.getPayload();
+            System.out.println("Available tables:");
+            for (String id : tables) {
+                System.out.println("  - " + id);
+            }
+        }
+
+    } catch (IOException | ClassNotFoundException e) {
+        System.out.println("Error listing tables: " + e.getMessage());
+    }
+}
+    public void placeBet(double amount) {
+    if (!isLoggedIn()) {
+        System.out.println("Must be logged in");
+        return;
+    }
+
+    try {
+        Message betMsg = new Message(
+                UUID.randomUUID().toString(),
+                MessageType.BET_PLACED,
+                clientUUID,
+                "SERVER",
+                amount,
+                LocalDateTime.now()
+        );
+
+        out.writeObject(betMsg);
+        out.flush();
+
+        Message response = (Message) in.readObject();
+        
+        if (response.getMessageType() == MessageType.TABLE_SNAPSHOT) {
+            TableSnapshot snapshot = (TableSnapshot) response.getPayload();
+            // Update GUI if needed
+            System.out.println("Bet placed: $" + amount);
+        }
+
+    } catch (IOException | ClassNotFoundException e) {
+        System.out.println("Error placing bet: " + e.getMessage());
+    }
+}
+
+public void sendPlayerAction(String action, GUI gui) {
+    if (!isLoggedIn()) {
+        System.out.println("Must be logged in");
+        return;
+    }
+
+    try {
+        Message actionMsg = new Message(
+                UUID.randomUUID().toString(),
+                MessageType.PLAYER_ACTION,
+                clientUUID,
+                "SERVER",
+                action,
+                LocalDateTime.now()
+        );
+
+        out.writeObject(actionMsg);
+        out.flush();
+
+        Message response = (Message) in.readObject();
+        
+        if (response.getMessageType() == MessageType.TABLE_SNAPSHOT) {
+            TableSnapshot snapshot = (TableSnapshot) response.getPayload();
+            gui.displayTable(snapshot);
+            System.out.println("Action: " + action);
+        } else if (response.getMessageType() == MessageType.ERROR) {
+            gui.displayError((String) response.getPayload());
+        }
+
+    } catch (IOException | ClassNotFoundException e) {
+        System.out.println("Error sending action: " + e.getMessage());
+    }
+
+}
 
     //Snapshot helpers
 
@@ -333,6 +449,10 @@ public class Client {
         }
     }
 
+
+
+    //Snapshot helpers
+
     public TableSnapshot requestTableState() {
         try {
             Message req = new Message(
@@ -369,11 +489,6 @@ public class Client {
             return null;
         }
     }
-
-
-
-
-
 
     /* =========================
        Main entry point

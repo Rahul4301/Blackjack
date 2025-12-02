@@ -166,7 +166,8 @@ public class Menu {
                 break;
 
             case 2:
-                System.out.println("Leaving table (if joined)...");
+                System.out.print("Leaving table (if joined)...");
+                client.leaveTable();
                 break;
             default:
                 goBack();
