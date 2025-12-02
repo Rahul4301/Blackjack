@@ -20,4 +20,12 @@ public abstract class Account implements Serializable {
     public AccState getAccState(){
         return accountState;
     }
+    public String getAccountType() {
+    if (this instanceof Player) {
+        return "PLAYER";
+    } else if (this instanceof Dealer) {
+        return "DEALER";
+    }
+    return "UNKNOWN";
+}
 }

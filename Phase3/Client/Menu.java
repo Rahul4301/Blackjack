@@ -139,11 +139,16 @@ public class Menu {
         int opt = readInt();
         switch (opt) {
             case 1:
-                System.out.println("Requesting to join a table...");
-                // client.joinTable(...) // integrate with Client
+                System.out.print("Enter table ID to join: ");
+                String tableId = scanner.nextLine().trim();
+                if (tableId.isEmpty()){
+                    tableId = "T1";
+                }
+                client.joinTable(tableId);
                 break;
             case 2:
-                System.out.println("Leaving table (if joined)...");
+                System.out.print("Leaving table (if joined)...");
+                client.leaveTable();
                 break;
             default:
                 goBack();
@@ -173,16 +178,10 @@ public class Menu {
         int opt = readInt();
         switch (opt) {
             case 1:
-                System.out.println("Requesting to create a new table...");  //TODO
-                // send CREATE_TABLE and handle snapshot
-                // Example if you use static Client:
-                // out.writeObject(Client.createTable());
-                // Message resp = (Message) in.readObject();
-                // if OK and payload is TableSnapshot, call gui.displayTable(...)
+                client.createTable();
                 break;
             case 2:
-                System.out.println("Requesting to leave current table...");
-                // send LEAVE_TABLE
+                client.leaveTable();
                 break;
             default:
                 goBack();
