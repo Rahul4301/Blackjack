@@ -153,14 +153,27 @@ public class Server {
             }
         }
 
-        private void handleStart(Message msg){
-            if(table.startRound()){
-                sendMessage(createOKResponse(msg, table.createSnapshotFor(clientID)));
+        private void handleStart(Message msg) {
+            if (currentTable == null) {
+                sendMessage(createErrorResponse(msg, "Not currently attached to a table"));
                 return;
-            } else {
-                sendMessage(createErrorResponse(msg, "Error Starting Round"));
             }
+
+            GameTable table = currentTable;
+
+            boolean started = table.startRound();
+            if (!started) {
+                sendMessage(createErrorResponse(msg,
+                        "Error starting round. Make sure the table is in BETTING state and at least one player has a valid bet."));
+                return;
+            }
+
+            TableSnapshot snapshot = table.createSnapshotFor(null);
+
+            // Send a direct response the dealer's client.startRound() is waiting for.
+            sendMessage(createOKResponse(msg, snapshot));
         }
+
 
         private void handleDeposit(Message msg){
             // 1. Validate payload type
@@ -281,30 +294,24 @@ public class Server {
             if (currentTable == null) {
                 sendMessage(createErrorResponse(msg, "Not currently at a table"));
                 return;
-            }           
+            }
 
             Object payload = msg.getPayload();
             if (!(payload instanceof Double amount)) {
                 sendMessage(createErrorResponse(msg, "Expected bet amount (Double) as payload"));
                 return;
             }
+
             // Place the bet on this player's object
             player.placeBet(amount);
 
             GameTable table = currentTable;
 
-            // For simple one-player, one-dealer flow, start the round immediately
-            boolean started = table.startRound();  // uses GameTable.startRound which deals cards and sets state
-            if (!started) {
-                sendMessage(createErrorResponse(msg,
-                        "Could not start round. Make sure at least one player is seated and has a valid bet."));
-                return;
-            }
-
-            // After starting the round, broadcast a snapshot to all at this table
+            // Do NOT start the round here any more.
+            // Just broadcast an updated snapshot so everyone sees the bet.
             broadcastSnapshot(table);
-
         }
+
 
 
         private void handlePlayerAction(Message msg) {
@@ -380,9 +387,13 @@ public class Server {
 
             System.out.println("[Server] Player " + player.getUsername() + " joined table " + tableId);
 
+            // Start the 30 second countdown if this is the first player at this table
+            scheduleAutoStartIfNeeded(table);
+
             // Send an initial snapshot to this player
             TableSnapshot snapshotForPlayer = table.createSnapshotFor(player.getUsername());
             sendMessage(createOKResponse(msg, snapshotForPlayer));
+
         }
 
 
@@ -548,6 +559,46 @@ public class Server {
                 connected = false;
             }
         }
+
+                // Auto start countdown for the first player that joins a table
+        private void scheduleAutoStartIfNeeded(GameTable table) {
+            // We only care about the very first player at this table
+            int playerCount = table.getPlayers() != null ? table.getPlayers().size() : 0;
+            if (playerCount != 1) {
+                return;
+            }
+
+            String tableId = table.getTableID();
+            System.out.println("[Server] First player joined table " + tableId
+                    + ", starting 30 second auto start timer.");
+
+            new Thread(() -> {
+                try {
+                    Thread.sleep(30_000);    // 30 seconds
+                } catch (InterruptedException ignored) {
+                }
+
+                try {
+                    // After 30 seconds, try to start the round on this table.
+                    // This will only succeed if the table is still in a valid state
+                    // and at least one player has a valid bet.
+                    boolean started = table.startRound();
+                    if (started) {
+                        System.out.println("[Server] Auto starting round for table " + tableId);
+                        // Do NOT broadcast here to avoid confusing the request-response flow.
+                        // Players will see the new state when they call REQUEST_TABLE_STATE.
+                    } else {
+                        System.out.println("[Server] Auto start timer expired for table "
+                                + tableId + ", but round did not start (maybe dealer started early, "
+                                + "no players left, or no valid bets).");
+                    }
+                } catch (Exception e) {
+                    System.err.println("[Server] Error in auto start timer for table "
+                            + tableId + ": " + e.getMessage());
+                }
+            }, "AutoStart-" + tableId).start();
+        }
+
 
         
 

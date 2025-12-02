@@ -309,18 +309,17 @@ public class Menu {
             client.displaySnapshot(snapshot);
 
             System.out.println("1) Start game");
-            System.out.println("2) Refresh");      // optional now, but can keep it
+            System.out.println("2) Refresh");
             System.out.println("3) Leave table");
             System.out.print("Select: ");
 
             int choice = readInt();
             switch (choice) {
                 case 1:
-                    // existing start game logic
-                    // (for example send a START_ROUND or whatever you wired)
+                    client.startRound();
                     break;
                 case 2:
-                    // Manual refresh still allowed, but not needed
+                    // Manual refresh
                     snapshot = client.requestTableState();
                     break;
                 case 3:
@@ -333,6 +332,7 @@ public class Menu {
             }
         }
     }
+
 
 
    
