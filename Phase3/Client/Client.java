@@ -3,139 +3,192 @@ package Client;
 import Enums.MessageType;
 import Message.Message;
 import Server.Account;
-import java.io.*;
-import java.net.*;
+
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
+import java.net.Socket;
 import java.time.LocalDateTime;
 import java.util.Scanner;
 import java.util.UUID;
 
 public class Client {
+
     private static String clientUUID;
-    private static Account account;
-    public static void main(String[] args){
+
+    private final ObjectOutputStream out;
+    private final ObjectInputStream in;
+
+    private Account account;
+
+    public Client(ObjectOutputStream out, ObjectInputStream in) {
+        this.out = out;
+        this.in = in;
+    }
+
+    public boolean isLoggedIn() {
+        return account != null;
+    }
+
+    public Account getAccount() {
+        return account;
+    }
+
+    /* =========================
+       Client <-> Server actions
+       ========================= */
+
+    public boolean login(String username, String password) {
+        try {
+            if (account != null){
+                throw new ClassNotFoundException("Already logged in!");
+            }
+            String[] userpw = { username, password };
+            Message loginMsg = new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.LOGIN,
+                    clientUUID,
+                    "SERVER",
+                    userpw,
+                    LocalDateTime.now()
+            );
+
+            out.writeObject(loginMsg);
+            out.flush();
+
+            Message response = (Message) in.readObject();
+            System.out.println(response.toString());
+
+            if (response.getPayload() instanceof Account acc) {
+                System.out.println(acc.getUsername() + " is logged in!");
+                this.account = acc;
+                return true;
+            }
+
+            return false;
+
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error during login: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public boolean register(String username, String password, String type) {
+        try {
+            String[] regData = { username, password, type };
+            Message registerMsg = new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.REGISTER,
+                    clientUUID,
+                    "SERVER",
+                    regData,
+                    LocalDateTime.now()
+            );
+
+            out.writeObject(registerMsg);
+            out.flush();
+
+            Message response = (Message) in.readObject();
+            System.out.println(response.toString());
+
+            // if server returns an Account on successful register + auto login
+            if (response.getPayload() instanceof Account acc) {
+                System.out.println("Registered and logged in as " + acc.getUsername());
+                this.account = acc;
+                return true;
+            }
+
+            return false;
+
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error during register: " + e.getMessage());
+            return false;
+        }
+    }
+
+    public void logout() {
+        if (!isLoggedIn()) {
+            System.out.println("Not logged in.");
+            return;
+        }
+
+        try {
+            Message logoutMsg = new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.LOGOUT,
+                    clientUUID,
+                    "SERVER",
+                    null,
+                    LocalDateTime.now()
+            );
+
+            out.writeObject(logoutMsg);
+            out.flush();
+
+            Message response = (Message) in.readObject();
+            System.out.println(response.toString());
+
+            account = null;
+
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error during logout: " + e.getMessage());
+        }
+    }
+
+    public void sendExit() {
+        try {
+            Message exitMsg = new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.EXIT,
+                    clientUUID,
+                    "SERVER",
+                    null,
+                    LocalDateTime.now()
+            );
+
+            out.writeObject(exitMsg);
+            out.flush();
+
+            Message response = (Message) in.readObject();
+            System.out.println(response.toString());
+
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error sending EXIT: " + e.getMessage());
+        }
+    }
+
+    /* =========================
+       Main entry point
+       ========================= */
+
+    public static void main(String[] args) {
         clientUUID = UUID.randomUUID().toString();
         Scanner sc = new Scanner(System.in);
+
         System.out.print("Enter port #: ");
         int port = sc.nextInt();
-        sc.nextLine(); //flush scanner
-        OutputStream out = null;
-        InputStream in = null;
+        sc.nextLine(); // flush
 
-        boolean connected = true;
-        
-        try(Socket socket = new Socket("localhost", port)){
-            ObjectOutputStream objectOutputStream = new ObjectOutputStream(socket.getOutputStream());
-            objectOutputStream.flush();
-            ObjectInputStream objectInputStream = new ObjectInputStream(socket.getInputStream());
+        try (Socket socket = new Socket("localhost", port)) {
 
-            System.out.print("\nConnection successful.\n");
+            ObjectOutputStream out = new ObjectOutputStream(socket.getOutputStream());
+            out.flush();
+            ObjectInputStream in = new ObjectInputStream(socket.getInputStream());
 
-            //TEST CLIENT / SERVER HANDLING
-            //TODO: make server message handler
-            System.out.println("1 to login, 2 to create account, or 3 to logout. 4 to exit and end connection to server");
-            Scanner scan = new Scanner(System.in);
-            int choice = scan.nextInt();
-            scan.nextLine(); // flush scanner
-            //test LOGIN
-            while(choice != 4){
-                switch (choice){
+            System.out.println("\nConnection successful.");
 
-                    case 1:{
-                        System.out.print("Enter username: ");
-                        String username = scan.nextLine();
-                        System.out.print("Enter password: ");
-                        String password = scan.nextLine();
-                        objectOutputStream.writeObject(login(username, password));
-                        objectOutputStream.flush();
-                    } break;
+            Client client = new Client(out, in);
+            Menu menu = new Menu(client);
 
-                    case 2:{
-                        // Create account
-                        System.out.print("Enter username: ");
-                        String username = scan.nextLine();
-                        System.out.print("Enter password: ");
-                        String password = scan.nextLine();
-                        System.out.print("Enter account type (PLAYER or DEALER): ");
-                        String type = scan.nextLine();
-                        objectOutputStream.writeObject(register(username, password, type));
-                        objectOutputStream.flush();
-                    } break;
+            // Hand all interaction to the menu.
+            // Menu will internally call client.login(), client.logout(), etc.
+            menu.displayMainMenu();
 
-                    case 3:{
-                    //test LOGOUT
-                        objectOutputStream.writeObject(logout());
-                        account = null;
-                        objectOutputStream.flush();
-                    } break;
+            // When the menu loop ends, send EXIT and close connection.
+            client.sendExit();
 
-                    default:{
-                        System.exit(1);
-                    } break;
-                    }
-                    Message response = (Message) objectInputStream.readObject();
-                    System.out.println(response.toString());
-                    if(response.getPayload() instanceof Account acc){
-                        System.out.println(acc.getUsername() + " is logged in!");
-                        account = acc;
-                    }
-                    choice = scan.nextInt();
-                    scan.nextLine();
-            }
-            objectOutputStream.writeObject(exit());
-            objectOutputStream.flush();
-            Message response = (Message) objectInputStream.readObject();
-            System.out.println(response.toString());
-            
-            socket.close();
-            
-        } catch(IOException | ClassNotFoundException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
-    } 
-
-    public static Message login(String username, String password){
-        String[] userpw = {username, password};
-        return new Message(
-            UUID.randomUUID().toString(), 
-            MessageType.LOGIN,
-            clientUUID,
-            "SERVER",
-            userpw, LocalDateTime.now()); 
     }
-
-    public static Message register(String username, String password, String type){
-        String[] regData = {username, password, type};
-        return new Message(
-            UUID.randomUUID().toString(), 
-            MessageType.REGISTER,
-            clientUUID,
-            "SERVER",
-            regData, 
-            LocalDateTime.now()); 
-    }
-
-    public static Message logout(){
-        return new Message(
-            UUID.randomUUID().toString(), 
-            MessageType.LOGOUT, 
-            clientUUID,
-            "SERVER",
-            null,
-            LocalDateTime.now());
-    }
-
-    public static Message exit(){
-        return new Message(
-            UUID.randomUUID().toString(),
-            MessageType.EXIT, 
-            clientUUID, 
-            "SERVER", 
-            null, 
-            LocalDateTime.now());
-    }
-
-
 }
-
-
-

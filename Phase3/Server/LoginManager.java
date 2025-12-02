@@ -95,20 +95,22 @@ public class LoginManager {
     }
 
     // Create account and add to ArrayList accounts 
-    public synchronized void createAccount(String username, String password, String type){
+    public synchronized Account createAccount(String username, String password, String type){
         for (Account account : accounts){
             if (account.getUsername().equalsIgnoreCase(username)){
                 throw new IllegalArgumentException("Username already exists: " + username);
             }
         }
-
+        Account newAccount;
         switch (type.toUpperCase()){
             case "PLAYER":
-                accounts.add(new Player(username, password, 1000));
+                newAccount = new Player(username, password, 1000);
+                accounts.add(newAccount);
                 numAccounts++;
                 break;
             case "DEALER":
-                accounts.add(new Dealer(username, password));
+                newAccount = new Dealer(username, password);
+                accounts.add(newAccount);
                 numAccounts++;
                 break;
             default:
@@ -116,6 +118,7 @@ public class LoginManager {
         }
         modified = true;
         System.out.println("Account created: " + username + " as " + type);
+        return newAccount;
     }
 
     // Convenience method for creating a Player account

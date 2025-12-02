@@ -38,11 +38,13 @@ public class Menu {
         while (isRunning) {
             options.clear();
             System.out.println("\n=== Blackjack Main Menu ===");
+            if(isLoggedIn){ System.out.println("Welcome, " + currentUser + "!");}
             System.out.println("1) Login");
-            System.out.println("2) Player Lobby");
-            System.out.println("3) Deposit");
-            System.out.println("4) Logout");
-            System.out.println("5) Exit");
+            System.out.println("2) Register");
+            System.out.println("3) Player Lobby");
+            System.out.println("4) Deposit");
+            System.out.println("5) Logout");
+            System.out.println("6) Exit");
             System.out.print("Select an option: ");
 
             int opt = readInt();
@@ -61,16 +63,61 @@ public class Menu {
             return;
         }
 
-        // NOTE: replace this with actual client authentication flow
-        this.isLoggedIn = true;
-        this.currentUser = username;
-        this.userType = "player";
-        System.out.println("Logged in as: " + username);
+        System.out.print("Password: ");
+        String password = scanner.nextLine().trim();
+
+        if (client.login(username, password)) {
+            this.isLoggedIn = true;
+            // if you want to mirror the actual account info:
+            if (client.getAccount() != null) {
+                this.currentUser = client.getAccount().getUsername();
+            } else {
+                this.currentUser = username;
+            }
+            this.userType = "player"; // or derive from Account if you have a type field
+            System.out.println("Logged in as: " + currentUser);
+        } else {
+            System.out.println("Login failed.");
+        }
+        goBack();
+    }
+
+    public void displayRegisterScreen(){
+        navigateTo("REGISTER");
+        System.out.println("\n--- Register New Account ---");
+        System.out.print("Username: ");
+        String username = scanner.nextLine().trim();
+        if (username.isEmpty()){
+            System.out.println("Invalid username.");
+            goBack();
+            return;
+        }
+
+        System.out.print("Password: ");
+        String password = scanner.nextLine().trim();
+        
+        System.out.print("Account type: ");
+        String type = scanner.nextLine().trim();
+
+        if(client.register(username, password, type)){
+            this.isLoggedIn = true;
+
+            if (client.getAccount() != null){
+                this.currentUser = client.getAccount().getUsername();
+            } else {
+                this.currentUser = username;
+            }
+        } else {
+            System.out.println("Registration failed.");
+            goBack();
+            return;
+        }
+        this.userType = type;
         goBack();
     }
 
     public void displayPlayerLobby() {
-        if (!isLoggedIn) {
+        if (!client.isLoggedIn()) {
             System.out.println("Please login first.");
             return;
         }
@@ -106,15 +153,18 @@ public class Menu {
                         displayLoginScreen();
                         break;
                     case 2:
-                        displayPlayerLobby();
+                        displayRegisterScreen();
                         break;
                     case 3:
-                        System.out.println("Deposit feature not implemented yet.");
+                        displayPlayerLobby();
                         break;
                     case 4:
-                        logout();
+                        System.out.println("Deposit feature not implemented yet.");
                         break;
                     case 5:
+                        logout();
+                        break;
+                    case 6:
                         exitGame();
                         break;
                     default:
@@ -142,16 +192,19 @@ public class Menu {
     }
 
     public void logout() {
-        if (!isLoggedIn) {
+        if (!client.isLoggedIn()) {
             System.out.println("No user is currently logged in.");
             return;
         }
+
         System.out.println("Logging out " + currentUser + "...");
+        client.logout();
+
         this.isLoggedIn = false;
         this.currentUser = null;
         this.userType = "guest";
-        // notify client if necessary: client.logout();
     }
+
 
     public void exitGame() {
         System.out.println("Exiting game. Goodbye!");

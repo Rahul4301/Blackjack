@@ -176,16 +176,16 @@ public class Server {
             }
         }
 
-        private void handleRegister(Message msg) {
+        private Account handleRegister(Message msg) {
             if (!(msg.getPayload() instanceof String[])) {
                 sendMessage(createErrorResponse(msg, "Invalid registration payload"));
-                return;
+                return null;
             }
 
             String[] regData = (String[]) msg.getPayload();
             if (regData.length < 3) {
                 sendMessage(createErrorResponse(msg, "Missing registration data"));
-                return;
+                return null;
             }
 
             String username = regData[0];
@@ -193,13 +193,16 @@ public class Server {
             String type = regData[2];
 
             try {
-                manager.createAccount(username, password, type);
-                sendMessage(createOKResponse(msg, "Account created successfully"));
+                Account newAccount = manager.createAccount(username, password, type);
+                sendMessage(createOKResponse(msg, newAccount));
                 System.out.println("[Server] New account registered: " + username);
                 UserLogger.log(username, "REGISTER");
+                this.account = newAccount;
+                return newAccount;
             } catch (IllegalArgumentException e) {
                 sendMessage(createErrorResponse(msg, e.getMessage()));
             }
+            return null;
         }
 
         private void handleBetPlaced(Message msg) {
