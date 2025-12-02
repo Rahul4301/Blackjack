@@ -346,8 +346,9 @@ public class Server {
                 return;
             }
 
-            // After each successful player action, broadcast an updated snapshot
-            broadcastSnapshot(table);
+            TableSnapshot snap = table.createSnapshotFor(player.getUsername());
+            sendMessage(createOKResponse(msg, snap));
+
         }
 
 
