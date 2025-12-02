@@ -54,11 +54,21 @@ public class Dealer extends Account {
         //add smthn here to see if player(s) has made move
         return flag;
     }
+    public boolean isBust() {
+        return hand.getValue() > 21;
+    }
 
     public HandEval compareHands(Hand playerHand){
-        if (hand.getValue() > playerHand.getValue()) return HandEval.MORE;
-        else if (hand.getValue() < playerHand.getValue()) return HandEval.LESS;
-        else return HandEval.EQUAL;
+        int dealerValue = hand.getValue();
+        int playerValue = playerHand.getValue();
+
+        if (dealerValue > playerValue) {
+            return HandEval.MORE;
+        } else if (dealerValue < playerValue) {
+            return HandEval.LESS;
+        } else {
+            return HandEval.EQUAL;
+        }
     }
 
 }

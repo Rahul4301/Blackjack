@@ -28,44 +28,6 @@ public class Server {
     // For each table ID, which client handlers are attached (dealer + players)
     private static final Map<String, List<ClientHandler>> tableClients = new ConcurrentHashMap<>();
 
-    public static void main(String[] args) {
-        manager = new LoginManager();
-        System.out.println("Loading user data...");
-        manager.loadData();
-        System.out.println("User data loaded. Starting server.");
-
-        ExecutorService pool = Executors.newFixedThreadPool(MAX_THREADS);
-        ServerSocket server = null;
-        int port = 8080;
-
-        System.out.println("ServerSocket awaiting connections on port " + port + "...");
-
-        try {
-            server = new ServerSocket(port);
-            server.setReuseAddress(true);
-
-            while (true) {
-                Socket client = server.accept();
-                System.out.print("\nNew client connected: " + client.getInetAddress().getHostAddress() + "\n");
-                ClientHandler clientSock = new ClientHandler(client, manager);
-                pool.execute(clientSock);
-            }
-        } catch (IOException e) {
-            System.err.println("Server encountered an I/O error: " + e.getMessage());
-        } finally {
-            if (server != null) {
-                try {
-                    server.close();
-                    System.out.println("Server socket closed. Shutting down LoginManager.");
-                    manager.save();
-                    pool.shutdown();
-                } catch (IOException e) {
-                    System.err.println("Error closing server: " + e.getMessage());
-                }
-            }
-        }
-    }
-
     /**
      * ClientHandler implementation embedded to avoid separate file.
      */
@@ -148,11 +110,10 @@ public class Server {
                 case REQUEST_PROFILE:
                     handleRequestProfile(msg);
                     break;
-
-                case CREATE_TABLE:         // new
+                case CREATE_TABLE:         
                     handleCreateTable(msg);
                     break;
-                case LIST_TABLES:          // new
+                case LIST_TABLES:          
                     handleListTables(msg);
                     break;
                 case EXIT:
@@ -490,6 +451,48 @@ public class Server {
             );
         }
     }
+    
+     /* =========================
+       Main entry point
+       ========================= */    
+       public static void main(String[] args) {
+        manager = new LoginManager();
+        System.out.println("Loading user data...");
+        manager.loadData();
+        System.out.println("User data loaded. Starting server.");
+
+        ExecutorService pool = Executors.newFixedThreadPool(MAX_THREADS);
+        ServerSocket server = null;
+        int port = 8080;
+
+        System.out.println("ServerSocket awaiting connections on port " + port + "...");
+
+        try {
+            server = new ServerSocket(port);
+            server.setReuseAddress(true);
+
+            while (true) {
+                Socket client = server.accept();
+                System.out.print("\nNew client connected: " + client.getInetAddress().getHostAddress() + "\n");
+                ClientHandler clientSock = new ClientHandler(client, manager);
+                pool.execute(clientSock);
+            }
+        } catch (IOException e) {
+            System.err.println("Server encountered an I/O error: " + e.getMessage());
+        } finally {
+            if (server != null) {
+                try {
+                    server.close();
+                    System.out.println("Server socket closed. Shutting down LoginManager.");
+                    manager.save();
+                    pool.shutdown();
+                } catch (IOException e) {
+                    System.err.println("Error closing server: " + e.getMessage());
+                }
+            }
+        }
+    }
+
 }
 
 

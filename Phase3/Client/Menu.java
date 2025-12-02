@@ -5,6 +5,8 @@ import java.util.ArrayList;
 import java.util.Scanner;
 import java.util.Stack;
 
+import Shared.*;
+
 
 /**
  * Simple console-based Menu class for Blackjack client interaction.
@@ -178,15 +180,23 @@ public class Menu {
         int opt = readInt();
         switch (opt) {
             case 1:
-                client.createTable();
+                System.out.println("Requesting to create a new table...");
+                TableSnapshot snapshot = client.createTable();
+                if (snapshot != null) {
+                    // Enter table view and stay there until dealer presses 4
+                    manageDealerTable(snapshot);
+                }
                 break;
             case 2:
-                client.leaveTable();
+                System.out.println("Requesting to leave current table...");
+                // send LEAVE_TABLE here when you implement it
                 break;
+            case 3:
             default:
                 goBack();
                 break;
         }
+        // remove the extra goBack() here, or you will pop one level
     }
 
 
@@ -201,11 +211,11 @@ public class Menu {
                         displayRegisterScreen();
                         break;
                     case 3:
-                        if(userType.equalsIgnoreCase("DEALER")){
+                        if (userType.equalsIgnoreCase("DEALER")) {
                             displayDealerLobby();
-                            break;
+                        } else {
+                            displayPlayerLobby();
                         }
-                        displayPlayerLobby();
                         break;
                     case 4:
                         System.out.println("Deposit feature not implemented yet.");
@@ -220,10 +230,34 @@ public class Menu {
                         System.out.println("Invalid selection.");
                 }
                 break;
+
+            case "DEALER_LOBBY":
+                switch (option) {
+                    case 1:
+                        System.out.println("Requesting to create a new table...");
+                        var snap = client.createTable();
+                        if (snap != null) {
+                            // Here you can go into your table management loop
+                            manageDealerTable(snap);
+                        }
+                        break;
+                    case 2:
+                        System.out.println("Requesting to leave current table...");
+                        // client.leaveTable() when you implement it
+                        break;
+                    case 3:
+                        goBack();   // returns to previous screen, probably MAIN
+                        break;
+                    default:
+                        System.out.println("Invalid selection.");
+                }
+                break;
+
             default:
                 System.out.println("Unhandled screen: " + currentScreen);
         }
     }
+
 
     public void navigateTo(String screen) {
         if (currentScreen != null) {
@@ -261,6 +295,47 @@ public class Menu {
         try {
             scanner.close();
         } catch (Exception ignored) {
+        }
+    }
+
+    //More snapshot stuff
+    private void manageDealerTable(TableSnapshot snapshot) {
+        boolean managing = true;
+        while (managing) {
+            System.out.println();
+            System.out.println("=== Current table view ===");
+
+            // If you put displaySnapshot in Client:
+            client.displaySnapshot(snapshot);
+
+            // If displaySnapshot is instead in Menu, call displaySnapshot(snapshot) directly
+
+            System.out.println();
+            System.out.println("3) Start game");
+            System.out.println("4) Back to main menu");
+            System.out.print("Select an option: ");
+
+            int choice = readInt();
+            switch (choice) {
+                case 3:
+                    // Only allow if there is at least one player at the table
+                    if (snapshot.getPlayers() == null || snapshot.getPlayers().isEmpty()) {
+                        System.out.println("You cannot start the game. No players have joined this table yet.");
+                    } else {
+                        // Ask server to start the round and return a fresh snapshot
+                        // TableSnapshot newSnap = client.startRound(snapshot.getTableId());
+                        // if (newSnap != null) {
+                        //     snapshot = newSnap;  // update view
+                        // }
+                    }
+                    break;
+                case 4:
+                    managing = false;   // exit table view loop
+                    break;
+                default:
+                    System.out.println("Invalid option. Please choose 3 or 4.");
+                    break;
+            }
         }
     }
 
