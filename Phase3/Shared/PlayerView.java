@@ -4,7 +4,6 @@ import java.io.Serializable;
 import java.util.List;
 
 public class PlayerView implements Serializable {
-    private String playerUsername;
     private String username;
     private double betAmount;
     private int handValue;
@@ -14,7 +13,7 @@ public class PlayerView implements Serializable {
     private List<CardView> cards;
     private double balance;           // NEW
 
-    public PlayerView(String playerUsername,
+    public PlayerView(
                       String username,
                       double betAmount,
                       int handValue,
@@ -23,7 +22,6 @@ public class PlayerView implements Serializable {
                       boolean isYourTurn,
                       List<CardView> cards,
                       double balance) {    // NEW PARAM
-        this.playerUsername = playerUsername;
         this.username = username;
         this.betAmount = betAmount;
         this.handValue = handValue;
@@ -33,8 +31,6 @@ public class PlayerView implements Serializable {
         this.cards = cards;
         this.balance = balance;           // NEW ASSIGNMENT
     }
-
-    public String getPlayerUsername() { return playerUsername; }
     public String getUsername() { return username; }
     public double getBetAmount() { return betAmount; }
     public int getHandValue() { return handValue; }

@@ -4,6 +4,7 @@ import Enums.MessageType;
 import Enums.PlayerAction;
 import Message.Message;
 import Server.Account;
+import Server.Dealer;
 import Shared.CardView;
 import Shared.DealerView;
 import Shared.PlayerView;
@@ -420,7 +421,7 @@ public void leaveTable() {
         System.out.println("Current player: " + snap.getCurrentPlayerUsername());
 
         // Dealer view
-        DealerView dv = snap.getDealer();
+        DealerView dv = snap.getDealerView();
         System.out.print("Dealer cards: ");
         for (CardView cv : dv.getCards()) {
             if (cv.isHidden()) {
@@ -548,6 +549,15 @@ public void leaveTable() {
         }
         
     }
+
+    public String getUsername(){
+        return account.getUsername();
+    }
+
+    public boolean isDealer() {
+        return account instanceof Dealer;
+    }
+
 
     /* =========================
        Main entry point

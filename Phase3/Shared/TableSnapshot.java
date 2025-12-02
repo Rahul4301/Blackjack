@@ -26,6 +26,6 @@ public class TableSnapshot implements Serializable {
     public String getTableId() { return tableId; }
     public GameState getState() { return state; }
     public String getCurrentPlayerUsername() { return currentPlayerUsername; }
-    public DealerView getDealer() { return dealer; }
+    public DealerView getDealerView() { return dealer; }
     public List<PlayerView> getPlayers() { return players; }
 }

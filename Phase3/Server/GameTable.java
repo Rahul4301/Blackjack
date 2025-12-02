@@ -385,7 +385,6 @@ public class GameTable {
         return new PlayerView(
                 // "playerId" in the view now stores username too
                 player.getUsername(),
-                player.getUsername(),
                 betAmount,
                 handValue,
                 active,

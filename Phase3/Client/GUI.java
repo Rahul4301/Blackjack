@@ -54,7 +54,7 @@ public class GUI {
         dealerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         dealerLabel.setFont(dealerLabel.getFont().deriveFont(Font.BOLD, 22f));
 
-        DealerView dealerView = snapshot.getDealer();
+        DealerView dealerView = snapshot.getDealerView();
         JPanel dealerCardsPanel = buildCardsPanel(
                 dealerView != null ? dealerView.getCards() : List.of(),
                 true, // dealer row (respect hidden)
@@ -84,6 +84,28 @@ public class GUI {
         rootPanel.add(playerLabel);
         rootPanel.add(Box.createVerticalStrut(10));
         rootPanel.add(playerCardsPanel);
+        // --- Leave Table + Back to Lobby buttons ---
+
+        
+        JPanel controlRow = new JPanel();
+        controlRow.setOpaque(false);
+
+        JButton leaveBtn = new JButton("Leave Table");
+        leaveBtn.addActionListener(e -> {
+            if (client != null) {
+                client.leaveTable();
+            }
+            showLobby();
+        });
+
+        JButton backBtn = new JButton("Back to Lobby");
+        backBtn.addActionListener(e -> showLobby());
+
+        controlRow.add(leaveBtn);
+        controlRow.add(backBtn);
+
+        rootPanel.add(Box.createVerticalStrut(20));
+        rootPanel.add(controlRow);
         rootPanel.add(Box.createVerticalGlue());
 
         rootPanel.revalidate();
@@ -290,7 +312,8 @@ public class GUI {
         JButton joinBtn = new JButton("Join Selected Table");
         JButton refreshBtn = new JButton("Refresh");
         JButton logoutBtn = new JButton("Logout");
-        
+        JButton createTableBtn = new JButton("Create Table");
+
         // Add action listeners
         joinBtn.addActionListener(e -> {
             int index = tableList.getSelectedIndex();
@@ -332,12 +355,40 @@ public class GUI {
             }
             showLoginScreen();  // Go back to login
         });
+
+        createTableBtn.addActionListener(e -> {
+            if (client != null) {
+                TableSnapshot snap = client.createTable();
+
+                if (snap != null) {
+                    JOptionPane.showMessageDialog(frame,
+                        "Table created!\nTable ID: " + snap.getTableId(),
+                        "Success",
+                        JOptionPane.INFORMATION_MESSAGE
+                    );
+
+                    // Automatically join the newly created table
+                    displayTable(snap);
+
+                } else {
+                    JOptionPane.showMessageDialog(frame,
+                        "Failed to create table.",
+                        "Error",
+                        JOptionPane.ERROR_MESSAGE
+                    );
+                }
+            }
+        });
+
+
         
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
         buttonPanel.add(joinBtn);
         buttonPanel.add(refreshBtn);
         buttonPanel.add(logoutBtn);
+        buttonPanel.add(createTableBtn);
+
         
         rootPanel.add(title, BorderLayout.NORTH);
         rootPanel.add(new JScrollPane(tableList), BorderLayout.CENTER);
