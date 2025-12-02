@@ -20,7 +20,7 @@ public class Client {
     private final ObjectOutputStream out;
     private final ObjectInputStream in;
     private boolean connected;
-
+    private GUI gui;
     private Account account;
 
     public Client(ObjectOutputStream out, ObjectInputStream in) {
@@ -38,7 +38,13 @@ public class Client {
     public Account getAccount() {
         return account;
     }
+    public void setGUI(GUI gui) {
+        this.gui = gui;
+    }
 
+    public GUI getGUI() {
+        return gui;
+    }
     /* =========================
        Client <-> Server actions
        ========================= */
