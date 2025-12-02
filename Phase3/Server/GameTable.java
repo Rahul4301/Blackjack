@@ -160,7 +160,7 @@ public class GameTable {
             }
         }
     state = GameState.RESULTS;
-}
+    }
 
 
     public String getTableID(){
@@ -203,6 +203,15 @@ public class GameTable {
         currentPlayerIndex = 0;
         state = GameState.BETTING;
     }
+
+    public Dealer getDealer() {
+        return dealer;
+    }
+
+    public int getPlayerCount() {
+        return players.size();
+    }
+
 
     //Send snapshots After: startRound() / dealInitialCards
     //After each successful handlePlayerAction()
