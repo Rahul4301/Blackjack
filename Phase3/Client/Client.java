@@ -166,6 +166,7 @@ public class Client {
                 // Handle disconnect
             }
         }
+
     public void sendExit() {
         try {
             Message exitMsg = new Message(
@@ -235,28 +236,11 @@ public class Client {
             System.out.println("Error sending CREATE_TABLE: " + e.getMessage());
             return null;
         }
-
-        out.writeObject(createMsg);
-        out.flush();
-
-        Message response = (Message) in.readObject();
-        
-        if (response.getMessageType() == MessageType.OK) {
-            System.out.println("✓ Table created!");
-            if (response.getPayload() instanceof Shared.TableSnapshot snapshot) {
-                System.out.println("Table ID: " + snapshot.getTableId());
-            }
-        } else {
-            System.out.println("✗ Error: " + response.getPayload());
-        }
-
-    } catch (IOException | ClassNotFoundException e) {
-        System.out.println("Error creating table: " + e.getMessage());
-    }
 }
 
-public void joinTable(String tableId) {
-    Message joinMsg = new Message(
+public TableSnapshot joinTable(String tableId) {
+    try{
+        Message joinMsg = new Message(
         UUID.randomUUID().toString(),
         MessageType.JOIN_TABLE,
         "CLIENT",
@@ -264,7 +248,18 @@ public void joinTable(String tableId) {
         tableId,  // The table ID to join
         LocalDateTime.now()
     );
-    sendMessage(joinMsg);
+        sendMessage(joinMsg);
+        Message response = (Message) in.readObject();
+        System.out.println(response.getPayload());
+
+        if(response.getPayload() instanceof TableSnapshot tableSnapshot){
+            return tableSnapshot;
+        }
+        throw new ClassNotFoundException("No table snapshot returned from server!");
+    } catch (IOException | ClassNotFoundException e){
+        System.out.println("Error sending JOIN_TABLE: " + e.getMessage());
+        return null;
+    }
 }
 
 public void leaveTable() {
