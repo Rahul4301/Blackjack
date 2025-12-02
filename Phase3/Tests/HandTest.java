@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public class HandTest {
 
     @Test
-    void testEmptyHandHasValueZero() {
+    public void testEmptyHandHasValueZero() {
         Hand hand = new Hand();
         assertEquals(0, hand.getValue(), "Empty hand should have value 0");
         assertFalse(hand.isBust(), "Empty hand should not be bust");
@@ -19,7 +19,7 @@ public class HandTest {
     }
 
     @Test
-    void testAddCardAndGetValue_NoAces() {
+    public void testAddCardAndGetValue_NoAces() {
         Hand hand = new Hand();
         hand.addCard(new Card(Rank.TEN, Suit.SPADES));
         hand.addCard(new Card(Rank.FIVE, Suit.HEARTS));
@@ -29,21 +29,21 @@ public class HandTest {
     }
 
     @Test
-    void testSingleAce_NoBust() {
+    public void testSingleAceNoBust() {
         Hand hand = new Hand();
-        hand.addCard(new Card(Rank.ACE, Suit.CLUBS));   // 11
-        hand.addCard(new Card(Rank.SIX, Suit.DIAMONDS)); // 6
+        hand.addCard(new Card(Rank.ACE, Suit.CLUBS));      // 11
+        hand.addCard(new Card(Rank.SIX, Suit.DIAMONDS));   // 6
 
         assertEquals(17, hand.getValue(), "Ace + 6 should be 17");
         assertFalse(hand.isBust(), "17 should not be bust");
     }
 
     @Test
-    void testSingleAce_ConvertedToAvoidBust() {
+    public void testSingleAceConvertedToAvoidBust() {
         Hand hand = new Hand();
-        hand.addCard(new Card(Rank.ACE, Suit.CLUBS));   // 11
-        hand.addCard(new Card(Rank.NINE, Suit.HEARTS)); // 9
-        hand.addCard(new Card(Rank.KING, Suit.SPADES)); // 10
+        hand.addCard(new Card(Rank.ACE, Suit.CLUBS));      // 11
+        hand.addCard(new Card(Rank.NINE, Suit.HEARTS));    // 9
+        hand.addCard(new Card(Rank.KING, Suit.SPADES));    // 10
 
         // 11 + 9 + 10 = 30 → Ace becomes 1 → 20
         assertEquals(20, hand.getValue(), "Ace should convert from 11 to 1 to avoid bust");
@@ -51,11 +51,11 @@ public class HandTest {
     }
 
     @Test
-    void testTwoAcesConversion() {
+    public void testTwoAcesConversion() {
         Hand hand = new Hand();
-        hand.addCard(new Card(Rank.ACE, Suit.CLUBS));    // 11
-        hand.addCard(new Card(Rank.ACE, Suit.HEARTS));   // 11
-        hand.addCard(new Card(Rank.NINE, Suit.DIAMONDS)); // 9
+        hand.addCard(new Card(Rank.ACE, Suit.CLUBS));       // 11
+        hand.addCard(new Card(Rank.ACE, Suit.HEARTS));      // 11
+        hand.addCard(new Card(Rank.NINE, Suit.DIAMONDS));   // 9
 
         // 11 + 11 + 9 = 31 → one Ace becomes 1 → 21
         assertEquals(21, hand.getValue(), "Two Aces + 9 should reduce to 21");
@@ -63,18 +63,18 @@ public class HandTest {
     }
 
     @Test
-    void testBustWithoutAces() {
+    public void testBustWithoutAces() {
         Hand hand = new Hand();
-        hand.addCard(new Card(Rank.KING, Suit.CLUBS));    // 10
-        hand.addCard(new Card(Rank.QUEEN, Suit.DIAMONDS)); // 10
-        hand.addCard(new Card(Rank.FIVE, Suit.HEARTS));    // 5
+        hand.addCard(new Card(Rank.KING, Suit.CLUBS));       // 10
+        hand.addCard(new Card(Rank.QUEEN, Suit.DIAMONDS));   // 10
+        hand.addCard(new Card(Rank.FIVE, Suit.HEARTS));      // 5
 
         assertEquals(25, hand.getValue(), "10 + 10 + 5 should be 25");
         assertTrue(hand.isBust(), "25 should be bust");
     }
 
     @Test
-    void testIsBlackjackTrue() {
+    public void testIsBlackjackTrue() {
         Hand hand = new Hand();
         hand.addCard(new Card(Rank.ACE, Suit.CLUBS));
         hand.addCard(new Card(Rank.TEN, Suit.HEARTS));
@@ -84,18 +84,18 @@ public class HandTest {
     }
 
     @Test
-    void testIsBlackjackFalse_WithThreeCards21() {
+    public void testIsBlackjackFalseWithThreeCard21() {
         Hand hand = new Hand();
         hand.addCard(new Card(Rank.SEVEN, Suit.CLUBS));
         hand.addCard(new Card(Rank.SEVEN, Suit.DIAMONDS));
         hand.addCard(new Card(Rank.SEVEN, Suit.HEARTS)); // 21, but 3 cards
 
         assertEquals(21, hand.getValue(), "7 + 7 + 7 should be 21");
-        assertFalse(hand.isBlackjack(), "21 with 3 cards is not blackjack by this implementation");
+        assertFalse(hand.isBlackjack(), "21 with 3 cards is not blackjack in this implementation");
     }
 
     @Test
-    void testClearHandResetsState() {
+    public void testClearHandResetsState() {
         Hand hand = new Hand();
         hand.addCard(new Card(Rank.TEN, Suit.SPADES));
         hand.addCard(new Card(Rank.FIVE, Suit.CLUBS));
@@ -112,7 +112,7 @@ public class HandTest {
     }
 
     @Test
-    void testIsActiveGetterSetter() {
+    public void testIsActiveGetterSetter() {
         Hand hand = new Hand();
         assertFalse(hand.isActive(), "New hand should not be active by default");
 
@@ -124,7 +124,7 @@ public class HandTest {
     }
 
     @Test
-    void testToStringIncludesValue() {
+    public void testToStringIncludesValueAndCards() {
         Hand hand = new Hand();
         hand.addCard(new Card(Rank.ACE, Suit.SPADES));
         hand.addCard(new Card(Rank.FOUR, Suit.HEARTS));
@@ -133,5 +133,6 @@ public class HandTest {
         assertNotNull(s, "toString should not return null");
         assertTrue(s.startsWith("Hand:"), "toString should start with 'Hand:'");
         assertTrue(s.contains("value"), "toString should include the hand value");
+        assertTrue(s.contains("ACE") && s.contains("FOUR"), "toString should include card ranks");
     }
 }
