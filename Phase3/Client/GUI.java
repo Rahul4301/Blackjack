@@ -14,6 +14,9 @@ import javax.swing.*;
 public class GUI {
     private DefaultListModel<String> tableModel;
     private JList<String> tableList;
+    private boolean inTableMode = false;
+
+    private javax.swing.Timer autoRefreshTimer;
 
     private JFrame frame;
     private JPanel rootPanel;
@@ -29,6 +32,7 @@ public class GUI {
         tableModel = new DefaultListModel<>();
         tableList = new JList<>(tableModel);
         initFrame();
+        startAutoRefresh();
         showLoginScreen();
     }
 
@@ -49,7 +53,7 @@ public class GUI {
     //show a table snapshot (dealer + player hands)
     public void displayTable(TableSnapshot snapshot) {
         currentScreen = "TABLE";
-
+        inTableMode = true;
         rootPanel.removeAll();
         rootPanel.setLayout(new BoxLayout(rootPanel, BoxLayout.Y_AXIS));
 
@@ -314,6 +318,34 @@ public class GUI {
         }
         System.out.println("Shutting down GUI");
     }
+
+    /** Starts a Swing timer that refreshes the table while we are on the TABLE screen. */
+    private void startAutoRefresh() {
+        // Avoid starting multiple timers
+        if (autoRefreshTimer != null && autoRefreshTimer.isRunning()) {
+            return;
+        }
+
+        autoRefreshTimer = new javax.swing.Timer(1000, e -> {
+            // Only refresh when we are actually viewing a table
+            if (!"TABLE".equals(currentScreen)) {
+                return;
+            }
+
+            if (client == null) {
+                return;
+            }
+
+            TableSnapshot snap = client.requestTableState();
+            if (snap != null) {
+                displayTable(snap);
+            }
+        });
+
+        autoRefreshTimer.start();
+    }
+
+
 
     public void showLoginScreen() {
         currentScreen = "LOGIN";
