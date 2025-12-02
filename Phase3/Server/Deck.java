@@ -47,4 +47,9 @@ public class Deck {
     public String getDeckID() {
         return deckID;
     }
+    
+    @Override
+    public String toString() {
+        return "Deck[" + deckID + "] with " + cardsRemaining() + " cards remaining";
+    }
 }
