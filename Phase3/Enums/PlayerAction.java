@@ -2,6 +2,6 @@ package Enums;
 
 public enum PlayerAction {
     HIT,
-    STAND
-};
-
+    STAND,
+    DOUBLE
+}

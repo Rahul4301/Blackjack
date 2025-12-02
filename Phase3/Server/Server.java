@@ -116,31 +116,31 @@ public class Server {
                     handleRegister(msg);//done
                     break;
                 case DEPOSIT:
-                    handleDeposit(msg);
+                    handleDeposit(msg); //done
                     break;
                 case BET_PLACED:
-                    handleBetPlaced(msg);
+                    handleBetPlaced(msg); //done
                     break;
                 case PLAYER_ACTION:
                     handlePlayerAction(msg);
                     break;
                 case JOIN_TABLE:
-                    handleJoinTable(msg);
+                    handleJoinTable(msg); //done
                     break;
                 case LEAVE_TABLE:
-                    handleLeaveTable(msg);
+                    handleLeaveTable(msg); //done
                     break;
                 case REQUEST_PROFILE:
                     handleRequestProfile(msg);
                     break;
                 case CREATE_TABLE:         
-                    handleCreateTable(msg);//done (?)
+                    handleCreateTable(msg);//done 
                     break;
                 case LIST_TABLES:          
                     handleListTables(msg);
                     break;
                 case REQUEST_TABLE_STATE:
-                    handleRequestTableState(msg);
+                    handleRequestTableState(msg); //done (?)
                     break;
                 case START:
                     handleStart(msg);
@@ -657,7 +657,6 @@ public class Server {
             }
         }
     }
-
 }
 
 

@@ -296,127 +296,172 @@ public class Menu {
     }
 
     //More snapshot stuff
-    private void manageDealerTable(TableSnapshot snapshot) {
+    public void manageDealerTable(TableSnapshot snapshot) {
         boolean managing = true;
-        while (managing) {
-            System.out.println();
-            System.out.println("=== Current table view ===");
 
-            // If you put displaySnapshot in Client:
+        while (managing) {
+            // Always try to pull an updated snapshot first
+            TableSnapshot refreshed = client.requestTableState();
+            if (refreshed != null) {
+                snapshot = refreshed;
+            }
+
             client.displaySnapshot(snapshot);
 
-            // If displaySnapshot is instead in Menu, call displaySnapshot(snapshot) directly
-
-            System.out.println();
-            System.out.println("3) Start game");
-            System.out.println("4) Back to main menu");
-            System.out.print("Select an option: ");
+            System.out.println("1) Start game");
+            System.out.println("2) Refresh");      // optional now, but can keep it
+            System.out.println("3) Leave table");
+            System.out.print("Select: ");
 
             int choice = readInt();
             switch (choice) {
-                case 3:
-                    // Only allow if there is at least one player at the table
-                    if (snapshot.getPlayers() == null || snapshot.getPlayers().isEmpty()) {
-                        //snapshot = client.requestTableState();
-                        System.out.println("You cannot start the game. No players have joined this table yet.");
-                    } else {
-                        //Ask server to start the round and return a fresh snapshot
-                        client.startRound();
-                    }
+                case 1:
+                    // existing start game logic
+                    // (for example send a START_ROUND or whatever you wired)
                     break;
-                case 4:
-                    managing = false;   // exit table view loop
+                case 2:
+                    // Manual refresh still allowed, but not needed
+                    snapshot = client.requestTableState();
+                    break;
+                case 3:
+                    client.leaveTable();
+                    managing = false;
                     break;
                 default:
-                    System.out.println("Invalid option. Please choose 3 or 4.");
+                    System.out.println("Not an option.");
                     break;
             }
         }
     }
 
-   public void managePlayerTable(TableSnapshot snapshot) {
-        boolean playing = true;
 
-        while (playing) {
+   
+public void managePlayerTable(TableSnapshot snapshot) {
+    boolean playing = true;
+    GameState lastState = null;
+    Double balanceBeforeRound = null;
+
+    while (playing) {
+        if (snapshot == null) {
+            snapshot = client.requestTableState();
             if (snapshot == null) {
-                snapshot = client.requestTableState();
-                if (snapshot == null) {
-                    System.out.println("Could not load table state.");
-                    return;
-                }
+                System.out.println("Could not load table state.");
+                return;
             }
+        }
 
-            client.displaySnapshot(snapshot);
+        client.displaySnapshot(snapshot);
 
-            // If we are still in the betting phase, do not allow Hit / Stand yet
-            if (snapshot.getState() == GameState.BETTING) {
-                System.out.println("== Betting phase ==");
-                System.out.println("1) Place bet");
-                System.out.println("2) Refresh");
-                System.out.println("3) Leave table");
-                System.out.print("Select: ");
-
-                int choice = readInt();
-                switch (choice) {
-                    case 1:
-                        System.out.print("Enter bet amount (whole dollars): ");
-                        int betInt = readInt();
-                        double amount = betInt;
-
-                        // Send BET_PLACED to the server
-                        client.placeBet(amount);
-
-                        // After placing the bet, pull a fresh snapshot
-                        snapshot = client.requestTableState();
-                        break;
-
-                    case 2:
-                        snapshot = client.requestTableState();
-                        break;
-
-                    case 3:
-                        client.leaveTable();
-                        playing = false;
-                        break;
-
-                    default:
-                        System.out.println("Not an option.");
-                        break;
-                }
-
-            } else {
-                // Normal in-round play menu, state should be IN_PROGRESS or RESULTS
-                System.out.println("1) Hit");
-                System.out.println("2) Stand");
-                System.out.println("3) Refresh");
-                System.out.println("4) Leave table");
-                System.out.print("Select: ");
-
-                int choice = readInt();
-                switch (choice) {
-                    case 1:
-                        // Send HIT and use the snapshot returned by the server
-                        snapshot = client.sendPlayerAction(PlayerAction.HIT);
-                        break;
-                    case 2:
-                        // Send STAND and use the snapshot returned by the server
-                        snapshot = client.sendPlayerAction(PlayerAction.STAND);
-                        break;
-                    case 3:
-                        // Explicit refresh from server
-                        snapshot = client.requestTableState();
-                        break;
-                    case 4:
-                        client.leaveTable();
-                        playing = false;
-                        break;
-                    default:
-                        System.out.println("Not an option.");
-                        break;
+        // Find "you" in the snapshot
+        PlayerView youView = null;
+        if (snapshot.getPlayers() != null) {
+            for (PlayerView pv : snapshot.getPlayers()) {
+                if (pv.isYou()) {
+                    youView = pv;
+                    break;
                 }
             }
         }
+
+        // During BETTING, show and remember balance before betting
+        if (snapshot.getState() == GameState.BETTING && youView != null) {
+            if (balanceBeforeRound == null) {
+                balanceBeforeRound = youView.getBalance();
+            }
+            System.out.println("Your balance before betting: " + balanceBeforeRound);
+        }
+
+        // When we first enter RESULTS, show win/lose and balances
+        if (snapshot.getState() == GameState.RESULTS
+                && lastState != GameState.RESULTS
+                && youView != null) {
+
+            double after = youView.getBalance();
+
+            if (balanceBeforeRound != null) {
+                if (after > balanceBeforeRound) {
+                    System.out.println(">>> YOU WIN! <<<");
+                } else if (after < balanceBeforeRound) {
+                    System.out.println(">>> YOU LOSE <<<");
+                } else {
+                    System.out.println(">>> PUSH (no net change) <<<");
+                }
+
+                System.out.println("Balance before betting: " + balanceBeforeRound);
+                System.out.println("Balance after round:   " + after);
+            } else {
+                System.out.println("Round finished. Your balance: " + after);
+            }
+
+            // prepare for possible next round
+            balanceBeforeRound = after;
+        }
+
+        lastState = snapshot.getState();
+
+        // Existing menus for BETTING vs IN_PROGRESS / RESULTS
+
+        if (snapshot.getState() == GameState.BETTING) {
+            System.out.println("== Betting phase ==");
+            System.out.println("1) Place bet");
+            System.out.println("2) Refresh");
+            System.out.println("3) Leave table");
+            System.out.print("Select: ");
+
+            int choice = readInt();
+            switch (choice) {
+                case 1:
+                    System.out.print("Enter bet amount (whole dollars): ");
+                    int betInt = readInt();
+                    double amount = betInt;
+                    client.placeBet(amount);
+                    snapshot = client.requestTableState();
+                    break;
+                case 2:
+                    snapshot = client.requestTableState();
+                    break;
+                case 3:
+                    client.leaveTable();
+                    playing = false;
+                    break;
+                default:
+                    System.out.println("Not an option.");
+                    break;
+            }
+
+        } else {
+            System.out.println("1) Hit");
+            System.out.println("2) Stand");
+            System.out.println("3) Double down");
+            System.out.println("4) Refresh");
+            System.out.println("5) Leave table");
+            System.out.print("Select: ");
+
+            int choice = readInt();
+            switch (choice) {
+                case 1:
+                    snapshot = client.sendPlayerAction(PlayerAction.HIT);
+                    break;
+                case 2:
+                    snapshot = client.sendPlayerAction(PlayerAction.STAND);
+                    break;
+                case 3:
+                    snapshot = client.sendPlayerAction(PlayerAction.DOUBLE);
+                    break;
+                case 4:
+                    snapshot = client.requestTableState();
+                    break;
+                case 5:
+                    client.leaveTable();
+                    playing = false;
+                    break;
+                default:
+                    System.out.println("Not an option.");
+                    break;
+            }
+        }
     }
+}
 
 
 

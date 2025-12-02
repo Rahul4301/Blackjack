@@ -110,22 +110,53 @@ public class GameTable {
         Player currentPlayer = players.get(currentPlayerIndex);
         if (!currentPlayer.getUsername().equalsIgnoreCase(playerUsername)) return false; // not this player's turn
 
-        switch(action) {
-            case HIT:
-                currentPlayer.hit(shoe.dealCard());
-                if (currentPlayer.getHandValue() > 21){
+            switch (action) {
+                case HIT:
+                    currentPlayer.hit(shoe.dealCard());
+                    if (currentPlayer.getHandValue() > 21){
+                        advanceTurn();
+                    }
+                    break;
+
+                case STAND:
                     advanceTurn();
-                }
-                break;
+                    break;
 
-            case STAND:
-                advanceTurn();
-                break;
+                case DOUBLE:
+                    Bet bet = currentPlayer.getBet();
+                    if (bet == null) {
+                        // no bet to double
+                        return false;
+                    }
 
-            default:
-                System.err.println("Not a viable player action!");
-                break;
-        }
+                    // Only allow double on the first two cards
+                    if (currentPlayer.getHand().getCards().size() != 2) {
+                        return false;
+                    }
+
+                    double originalAmount = bet.getAmount();
+                    double doubledTotal = originalAmount * 2;
+
+                    // Make sure player can afford doubling
+                    if (doubledTotal > currentPlayer.getBalance()) {
+                        System.err.println("Player " + currentPlayer.getUsername()
+                                + " cannot afford to double down.");
+                        return false;
+                    }
+
+                    // Mark bet as doubled so Bet.calculatePayout() doubles the result
+                    bet.doubled = true;
+
+                    // Give exactly one card, then move to next player
+                    currentPlayer.hit(shoe.dealCard());
+                    advanceTurn();
+                    break;
+
+                default:
+                    System.err.println("Not a viable player action!");
+                    break;
+            }
+
 
         return true;
     }

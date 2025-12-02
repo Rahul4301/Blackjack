@@ -6,6 +6,8 @@ public class Bet {
     private boolean settled;
     private BetStatus outcome;
     private Player player;
+    boolean doubled;       // new field, package-private so GameTable can touch it
+
 
     public Bet(Player player, double amount) {
         this.player = player;
@@ -32,14 +34,24 @@ public class Bet {
     }
 
     public double calculatePayout() {
+        double base;
+
         switch(outcome) {
-            case BLACKJACK: return amount * 1.5;
-            case WIN: return amount;
-            case PUSH: return 0; 
-            case LOSE: return -amount;
-            default: return 0;
+            case BLACKJACK: base = amount * 1.5; break;
+            case WIN:       base = amount;       break;
+            case PUSH:      base = 0;            break; 
+            case LOSE:      base = -amount;      break;
+            default:        base = 0;            break;
         }
+
+        if (doubled) {
+            base *= 2;
+        }
+
+        return base;
     }
+
+
 
     // getters
     public double getAmount() {

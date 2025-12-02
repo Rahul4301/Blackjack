@@ -385,8 +385,6 @@ public void leaveTable() {
             if (response.getMessageType() == MessageType.TABLE_SNAPSHOT &&
                     response.getPayload() instanceof TableSnapshot snapshot) {
 
-                // Reuse your existing helper to update local state and print
-                handleTableSnapshot(snapshot);
                 return snapshot;
 
             } else if (response.getMessageType() == MessageType.ERROR) {
