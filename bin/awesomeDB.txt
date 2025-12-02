@@ -1,4 +1,0 @@
-sam,sam,Player
-mas,nas,Dealer
-testplayer,pass123,Player
-testdealer,pass456,Dealer
