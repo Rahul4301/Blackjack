@@ -48,6 +48,10 @@ public class GameTable {
     public GameTable(Dealer dealer){
         tableID = ("T" + ++count);
         this.dealer = dealer;
+        // ensure dealer's hand is clear when creating a new table
+        if (this.dealer != null && this.dealer.getHand() != null) {
+            this.dealer.getHand().clearHand();
+        }
         players = new ArrayList<>(7);
         shoe = new Shoe(7); //Shoe & deck is randomized by default in their constructors
         bets = new ArrayList<>();

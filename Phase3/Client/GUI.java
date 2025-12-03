@@ -36,6 +36,11 @@ public class GUI {
         showLoginScreen();
     }
 
+    /** Attach a client instance to this GUI so the view can adapt for dealers */
+    public void setClient(Client client) {
+        this.client = client;
+    }
+
     /** Window setup */
     private void initFrame() {
         frame = new JFrame("Blackjack Client");
@@ -57,42 +62,84 @@ public class GUI {
         rootPanel.removeAll();
         rootPanel.setLayout(new BoxLayout(rootPanel, BoxLayout.Y_AXIS));
 
-        // ---- Dealer row ----
-        JLabel dealerLabel = new JLabel("Dealer");
-        dealerLabel.setForeground(Color.WHITE);
-        dealerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        dealerLabel.setFont(dealerLabel.getFont().deriveFont(Font.BOLD, 22f));
+        // Decide layout based on whether this client is a dealer
+        boolean localIsDealer = (client != null && client.isDealer());
 
         DealerView dealerView = snapshot.getDealerView();
         JPanel dealerCardsPanel = buildCardsPanel(
-                dealerView != null ? dealerView.getCards() : List.of(),
-                true,
-                dealerView != null && dealerView.hasHiddenCard()
+            dealerView != null ? dealerView.getCards() : List.of(),
+            true,
+            dealerView != null && dealerView.hasHiddenCard()
         );
 
-        // ---- Player row ----
-        PlayerView you = findYou(snapshot.getPlayers());
-        String playerTitle = (you != null ? "You: " + you.getUsername() : "Player");
-        JLabel playerLabel = new JLabel(playerTitle);
-        playerLabel.setForeground(Color.WHITE);
-        playerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
-        playerLabel.setFont(playerLabel.getFont().deriveFont(Font.BOLD, 22f));
+        // If the local user is the dealer, show players on top and dealer on bottom
+        if (localIsDealer) {
+            // Build a vertical list of each player's name + their cards
+            JPanel playersContainer = new JPanel();
+            playersContainer.setOpaque(false);
+            playersContainer.setLayout(new BoxLayout(playersContainer, BoxLayout.Y_AXIS));
 
-        JPanel playerCardsPanel = buildCardsPanel(
+            List players = snapshot.getPlayers();
+            if (players != null) {
+            for (Object o : players) {
+                if (!(o instanceof PlayerView pv)) continue;
+                JLabel name = new JLabel(pv.getUsername());
+                name.setForeground(Color.WHITE);
+                name.setAlignmentX(Component.CENTER_ALIGNMENT);
+                name.setFont(name.getFont().deriveFont(Font.BOLD, 18f));
+
+                JPanel cardsPanel = buildCardsPanel(pv.getCards(), false, false);
+
+                playersContainer.add(name);
+                playersContainer.add(Box.createVerticalStrut(5));
+                playersContainer.add(cardsPanel);
+                playersContainer.add(Box.createVerticalStrut(10));
+            }
+            }
+
+            // Layout: players (top) then dealer (bottom)
+            rootPanel.add(Box.createVerticalStrut(20));
+            rootPanel.add(playersContainer);
+            rootPanel.add(Box.createVerticalStrut(30));
+            JLabel dealerLabel = new JLabel("Dealer (You)");
+            dealerLabel.setForeground(Color.YELLOW);
+            dealerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            dealerLabel.setFont(dealerLabel.getFont().deriveFont(Font.BOLD, 22f));
+            rootPanel.add(dealerLabel);
+            rootPanel.add(Box.createVerticalStrut(10));
+            rootPanel.add(dealerCardsPanel);
+
+        } else {
+            // ---- Dealer row ----
+            JLabel dealerLabel = new JLabel("Dealer");
+            dealerLabel.setForeground(Color.WHITE);
+            dealerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            dealerLabel.setFont(dealerLabel.getFont().deriveFont(Font.BOLD, 22f));
+
+            // ---- Player row (for non-dealer clients we show "you") ----
+            PlayerView you = findYou(snapshot.getPlayers());
+            String playerTitle = (you != null ? "You: " + you.getUsername() : "Player");
+            JLabel playerLabel = new JLabel(playerTitle);
+            playerLabel.setForeground(Color.WHITE);
+            playerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
+            playerLabel.setFont(playerLabel.getFont().deriveFont(Font.BOLD, 22f));
+
+            JPanel playerCardsPanel = buildCardsPanel(
                 you != null ? you.getCards() : List.of(),
                 false,
                 false
-        );
+            );
 
-        // ---- Layout ----
-        rootPanel.add(Box.createVerticalStrut(30));
-        rootPanel.add(dealerLabel);
-        rootPanel.add(Box.createVerticalStrut(10));
-        rootPanel.add(dealerCardsPanel);
-        rootPanel.add(Box.createVerticalStrut(40));
-        rootPanel.add(playerLabel);
-        rootPanel.add(Box.createVerticalStrut(10));
-        rootPanel.add(playerCardsPanel);
+            // ---- Layout ----
+            rootPanel.add(Box.createVerticalStrut(30));
+            rootPanel.add(dealerLabel);
+            rootPanel.add(Box.createVerticalStrut(10));
+            rootPanel.add(dealerCardsPanel);
+            rootPanel.add(Box.createVerticalStrut(40));
+            rootPanel.add(playerLabel);
+            rootPanel.add(Box.createVerticalStrut(10));
+            rootPanel.add(playerCardsPanel);
+        }
 
         // ======================================================================
         // >>> LEAVE TABLE + BACK TO LOBBY <<<
