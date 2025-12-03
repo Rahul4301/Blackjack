@@ -21,17 +21,39 @@ public class MainApp {
         );
 
         // Ask for port
-        String portStr = JOptionPane.showInputDialog(
-                "Enter server port:",
-                "8080"
+        String ip = JOptionPane.showInputDialog(
+        null,
+        "Enter server IP:",
+        "Connect to Server",
+        JOptionPane.QUESTION_MESSAGE
         );
-        int port = 8080;
+
+        // User canceled the dialog
+        if (ip == null) return;
+
+        String portStr = JOptionPane.showInputDialog(
+                null,
+                "Enter server port:",
+                "Connect to Server",
+                JOptionPane.QUESTION_MESSAGE
+        );
+
+        // User canceled the dialog
+        if (portStr == null) return;
+
+        int port;
         try {
-            port = Integer.parseInt(portStr);
-        } catch (Exception e) {
-            JOptionPane.showMessageDialog(null,
-                    "Invalid input. Using default port 8080.");
+            port = Integer.parseInt(portStr.trim());
+        } catch (NumberFormatException ex) {
+            JOptionPane.showMessageDialog(
+                    null,
+                    "Port must be a number.",
+                    "Invalid Port",
+                    JOptionPane.ERROR_MESSAGE
+            );
+            return;
         }
+
 
         if (mode == 1) {
             // ------------------ CONSOLE MODE ------------------
@@ -57,7 +79,7 @@ public class MainApp {
 
         // ------------------ GUI MODE ------------------
         try {
-            Socket socket = new Socket("localhost", port);
+            Socket socket = new Socket(ip, port);
 
             java.io.ObjectOutputStream out = new java.io.ObjectOutputStream(socket.getOutputStream());
             out.flush();
