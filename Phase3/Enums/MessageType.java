@@ -20,5 +20,6 @@ public enum MessageType {
     LIST_TABLES,
     TABLE_SNAPSHOT,
     REQUEST_TABLE_STATE,
-    START
+    START,
+    NEXT_ROUND,   
 }

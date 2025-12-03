@@ -146,6 +146,9 @@ public class Server {
                 case START:
                     handleStart(msg);
                     break;
+                case NEXT_ROUND:
+                    handleNextRound(msg);
+                    break;
                 case EXIT:
                     handleExit(msg); //done
                     break;
@@ -153,6 +156,39 @@ public class Server {
                     System.out.println("[Server] Unhandled message type: " + msg.getMessageType());
             }
         }
+
+        private void handleNextRound(Message msg) {
+            if (account == null) {
+                sendMessage(createErrorResponse(msg, "Not logged in"));
+                return;
+            }
+
+            if (!(account instanceof Dealer)) {
+                sendMessage(createErrorResponse(msg, "Only dealers can start the next round"));
+                return;
+            }
+
+            if (currentTable == null) {
+                sendMessage(createErrorResponse(msg, "Not currently attached to a table"));
+                return;
+            }
+
+            GameTable table = currentTable;
+
+            // Optional: only allow reset from RESULTS
+            if (table.getState() != GameState.RESULTS) {
+                sendMessage(createErrorResponse(msg, "Cannot reset round unless state is RESULTS"));
+                return;
+            }
+
+            // This clears hands, bets, flags, and goes back to BETTING
+            table.resetForNextRound();
+
+            // Send updated snapshot back; others will see it via their polling
+            TableSnapshot snapshot = table.createSnapshotFor(null);
+            sendMessage(createOKResponse(msg, snapshot));
+        }
+
 
         private void handleStart(Message msg) {
             if (currentTable == null) {

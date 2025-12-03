@@ -3,6 +3,8 @@ package Client;
 import Enums.PlayerAction;
 import Enums.Rank;
 import Enums.Suit;
+import Enums.GameState;
+
 import Shared.CardView;
 import Shared.DealerView;
 import Shared.PlayerView;
@@ -15,6 +17,10 @@ public class GUI {
     private DefaultListModel<String> tableModel;
     private JList<String> tableList;
     private boolean inTableMode = false;
+    private GameState lastState = null;
+    private Double balanceBeforeRound = null;
+    
+
 
     private javax.swing.Timer autoRefreshTimer;
 
@@ -74,6 +80,29 @@ public class GUI {
 
         // If the local user is the dealer, show players on top and dealer on bottom
         if (localIsDealer) {
+
+    // If dealer just entered RESULTS, ask server to reset to BETTING
+            if (snapshot.getState() == GameState.RESULTS
+                    && lastState != GameState.RESULTS
+                    && client != null) {
+
+                Thread t = new Thread(new Runnable() {
+                    @Override
+                    public void run() {
+                        TableSnapshot updated = client.requestNextRound();
+                        if (updated != null) {
+                            SwingUtilities.invokeLater(new Runnable() {
+                                @Override
+                                public void run() {
+                                    displayTable(updated);
+                                }
+                            });
+                        }
+                    }
+                });
+                t.start();
+            }
+
             // Build a vertical list of each player's name + their cards
             JPanel playersContainer = new JPanel();
             playersContainer.setOpaque(false);
@@ -81,34 +110,37 @@ public class GUI {
 
             List players = snapshot.getPlayers();
             if (players != null) {
-            for (Object o : players) {
-                if (!(o instanceof PlayerView pv)) continue;
-                JLabel name = new JLabel(pv.getUsername());
-                name.setForeground(Color.WHITE);
-                name.setAlignmentX(Component.CENTER_ALIGNMENT);
-                name.setFont(name.getFont().deriveFont(Font.BOLD, 18f));
+                for (Object o : players) {
+                    if (!(o instanceof PlayerView pv)) {
+                        continue;
+                    }
+                    JLabel name = new JLabel(pv.getUsername());
+                    name.setForeground(Color.WHITE);
+                    name.setAlignmentX(Component.CENTER_ALIGNMENT);
+                    name.setFont(name.getFont().deriveFont(Font.BOLD, 18f));
 
-                JPanel cardsPanel = buildCardsPanel(pv.getCards(), false, false);
+                    JPanel cardsPanel = buildCardsPanel(pv.getCards(), false, false);
 
-                playersContainer.add(name);
-                playersContainer.add(Box.createVerticalStrut(5));
-                playersContainer.add(cardsPanel);
-                playersContainer.add(Box.createVerticalStrut(10));
-            }
+                    playersContainer.add(name);
+                    playersContainer.add(Box.createVerticalStrut(5));
+                    playersContainer.add(cardsPanel);
+                    playersContainer.add(Box.createVerticalStrut(10));
+                }
             }
 
             // Layout: players (top) then dealer (bottom)
             rootPanel.add(Box.createVerticalStrut(20));
             rootPanel.add(playersContainer);
             rootPanel.add(Box.createVerticalStrut(30));
+
             JLabel dealerLabel = new JLabel("Dealer (You)");
             dealerLabel.setForeground(Color.YELLOW);
             dealerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             dealerLabel.setFont(dealerLabel.getFont().deriveFont(Font.BOLD, 22f));
+
             rootPanel.add(dealerLabel);
             rootPanel.add(Box.createVerticalStrut(10));
             rootPanel.add(dealerCardsPanel);
-
         } else {
             // ---- Dealer row ----
             JLabel dealerLabel = new JLabel("Dealer");
@@ -118,18 +150,82 @@ public class GUI {
 
             // ---- Player row (for non-dealer clients we show "you") ----
             PlayerView you = findYou(snapshot.getPlayers());
-            String playerTitle = (you != null ? "You: " + you.getUsername() : "Player");
+
+            //WIN - LOSE / BALANCE / NEXT-ROUND BLOCK
+            // >>> HERE is where the win/lose / balance / next-round block goes <<<
+
+            // Track balance at the start of betting
+            if (snapshot.getState() == GameState.BETTING && you != null) {
+                if (balanceBeforeRound == null) {
+                    balanceBeforeRound = you.getBalance();
+                }
+            }
+
+            // When we first enter RESULTS, show win / lose and restart round
+            if (snapshot.getState() == GameState.RESULTS
+                    && lastState != GameState.RESULTS
+                    && you != null
+                    && balanceBeforeRound != null) {
+
+                double balanceAfter = you.getBalance();
+                double diff = balanceAfter - balanceBeforeRound;
+
+                String title = "Round Over";
+                String message;
+
+                if (diff > 0.0001) {
+                    double roundedDiff = Math.round(diff * 100.0) / 100.0;
+                    message = "You WIN!\nChange: +$" + roundedDiff
+                            + "\nBefore: $" + balanceBeforeRound
+                            + "\nAfter:  $" + balanceAfter;
+                } else if (diff < -0.0001) {
+                    double roundedDiff = Math.round((-diff) * 100.0) / 100.0;
+                    message = "You LOSE.\nChange: -$" + roundedDiff
+                            + "\nBefore: $" + balanceBeforeRound
+                            + "\nAfter:  $" + balanceAfter;
+                } else {
+                    message = "Push (no net change).\n"
+                            + "Balance: $" + balanceAfter;
+                }
+
+                JOptionPane.showMessageDialog(
+                        frame,
+                        message,
+                        title,
+                        JOptionPane.INFORMATION_MESSAGE
+                );
+
+                // Prepare for next round on the client
+                balanceBeforeRound = balanceAfter;
+            }
+
+            // Update lastState so we only trigger once per RESULTS entry
+            lastState = snapshot.getState();
+
+
+            String playerTitle;
+            if (you != null) {
+                playerTitle = "You: " + you.getUsername();
+            } else {
+                playerTitle = "Player";
+            }
             JLabel playerLabel = new JLabel(playerTitle);
             playerLabel.setForeground(Color.WHITE);
             playerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
             playerLabel.setFont(playerLabel.getFont().deriveFont(Font.BOLD, 22f));
 
+            List cardsToShow;
+            if (you != null) {
+                cardsToShow = you.getCards();
+            } else {
+                cardsToShow = List.of();
+            }
+
             JPanel playerCardsPanel = buildCardsPanel(
-                you != null ? you.getCards() : List.of(),
+                cardsToShow,
                 false,
                 false
             );
-
             // ---- Layout ----
             rootPanel.add(Box.createVerticalStrut(30));
             rootPanel.add(dealerLabel);
@@ -140,6 +236,8 @@ public class GUI {
             rootPanel.add(Box.createVerticalStrut(10));
             rootPanel.add(playerCardsPanel);
         }
+        
+        lastState = snapshot.getState();
 
         // ======================================================================
         // >>> LEAVE TABLE + BACK TO LOBBY <<<
@@ -574,8 +672,6 @@ public class GUI {
                 }
             }
         });
-
-
         
         JPanel buttonPanel = new JPanel();
         buttonPanel.setOpaque(false);
@@ -592,6 +688,65 @@ public class GUI {
         rootPanel.revalidate();
         rootPanel.repaint();
     }
+
+    private void maybeShowRoundResult(TableSnapshot snapshot, boolean localIsDealer) {
+        // Only show this for players, not the dealer
+        if (localIsDealer) {
+            lastState = snapshot.getState();
+            return;
+        }
+
+        PlayerView you = findYou(snapshot.getPlayers());
+        if (you == null) {
+            lastState = snapshot.getState();
+            return;
+        }
+
+        // While in BETTING, remember balance before the round
+        if (snapshot.getState() == GameState.BETTING) {
+            if (balanceBeforeRound == null) {
+                balanceBeforeRound = you.getBalance();
+            }
+        }
+
+        // When we first enter RESULTS, show a result popup
+        if (snapshot.getState() == GameState.RESULTS
+                && lastState != GameState.RESULTS) {
+
+            double after = you.getBalance();
+            String message;
+
+            if (balanceBeforeRound != null) {
+                if (after > balanceBeforeRound) {
+                    message = "You WIN!\n"
+                            + "Before: " + balanceBeforeRound + "\n"
+                            + "After: " + after;
+                } else if (after < balanceBeforeRound) {
+                    message = "You LOSE.\n"
+                            + "Before: " + balanceBeforeRound + "\n"
+                            + "After: " + after;
+                } else {
+                    message = "Push. No net change.\n"
+                            + "Balance: " + after;
+                }
+            } else {
+                message = "Round complete.\nYour balance: " + after;
+            }
+
+            JOptionPane.showMessageDialog(
+                    frame,
+                    message,
+                    "Round Over",
+                    JOptionPane.INFORMATION_MESSAGE
+            );
+
+            // Prepare for next round
+            balanceBeforeRound = after;
+        }
+
+        lastState = snapshot.getState();
+    }
+
 
     // Add this helper method for testing
     private void displayDemoTable() {

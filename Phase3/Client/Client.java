@@ -490,6 +490,49 @@ public void leaveTable() {
         }
    }
 
+    public TableSnapshot requestNextRound() {
+        if (!isLoggedIn()) {
+            System.out.println("Must be logged in");
+            return null;
+        }
+
+        try {
+            Message msg = new Message(
+                    UUID.randomUUID().toString(),
+                    MessageType.NEXT_ROUND,
+                    clientUUID,
+                    "SERVER",
+                    null,
+                    LocalDateTime.now()
+            );
+
+            out.writeObject(msg);
+            out.flush();
+
+            Message response = (Message) in.readObject();
+
+            if (response.getMessageType() == MessageType.OK &&
+                response.getPayload() instanceof TableSnapshot snapshot) {
+
+                // Keep client-side state in sync
+                handleTableSnapshot(snapshot);
+                return snapshot;
+
+            } else if (response.getMessageType() == MessageType.ERROR) {
+                System.out.println("Error requesting next round: " + response.getPayload());
+                return null;
+            } else {
+                System.out.println("Unexpected response to NEXT_ROUND: " + response);
+                return null;
+            }
+
+        } catch (IOException | ClassNotFoundException e) {
+            System.out.println("Error sending NEXT_ROUND: " + e.getMessage());
+            return null;
+        }
+    }
+
+
 
 
     //Snapshot helpers
