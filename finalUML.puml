@@ -1,9 +1,13 @@
-@startuml
+@startuml Blackjack_Classes
 ' ====== Global style ======
 skinparam classAttributeIconSize 0
 skinparam shadowing false
 skinparam classFontSize 12
 skinparam classBackgroundColor Snow
+skinparam packageTitleFontSize 14
+skinparam packageBackgroundColor #FAFAFA
+skinparam packageBorderColor #CCCCCC
+title Blackjack Project Class Diagram
 
 ' ========= Enums =========
 enum GameState {
@@ -63,212 +67,153 @@ enum MessageType {
 }
 
 
-' ========= Server Side (authoritative game logic) =========
-package "Server" {
+' ========= Server Side =========
+package "Server" as PK_Server {
   class Server {
-    + start() : void
-    + stop() : void
-    + broadcastUpdate() : void
-    + handleMessage(msg : Message) : void
+    + main(args : String[]) : void
   }
 
   class LoginManager {
-    + authenticate(username : String, password : String) : Account
+    + loadData() : void
+    + save() : void
+    + login(username : String, password : String) : Account
     + logout(account : Account) : void
+    + createAccount(u : String, p : String, type : String) : Account
   }
 
-  Server --> LoginManager : uses >
-  LoginManager --> Account : validates credentials
-
-  abstract class Account {
+  abstract class Account <<Serializable>> {
     - username : String
     - password : String
     - sessionActive : boolean
     - accountState : AccState
-    + login() : boolean
-    + logout() : void
+    + getUsername() : String
   }
 
-  class Player {
+  interface IUser
+
+  class Player extends Account {
     - balance : double
-    - isActive : boolean
-    - sessionID : String
-    - activeBet : Bet
-    + Player(username : String, balance : double) : void
-    + placeBet(amount : double) : boolean
-    + hit(deck : Deck) : void
-    + stand() : void
-    + doubleDown() : void
-    + split() : void
+    - bet : Bet
     + updateBalance(amount : double) : void
-    + isBust() : boolean
+    + placeBet(amount : double) : void
+    + hit(card : Card) : void
+    + getBet() : Bet
+    + getHand() : Hand
     + getHandValue() : int
   }
 
-  ' ======= Simplified Dealer facade =======
-  class Dealer {
+  class Dealer extends Account {
     - dealerID : String
     - currentTable : GameTable
-    - activeSession : boolean
     - hand : Hand
-    + Dealer() : void
-    + prepareRound(table : GameTable) : void
-    + initialDeal(table : GameTable) : void
-    + playDealerTurn(table : GameTable) : void
-    + resolveRound(table : GameTable) : void
-    + rebuildIfNeeded(table : GameTable) : void
-    - mustHit(total : int, soft : boolean) : boolean
-    - compareHands(playerHand : Hand) : int
-    - payout(table : GameTable) : void
+    + hit(card : Card) : boolean
+    + mustHit(total : int) : boolean
+    + compareHands(playerHand : Hand) : Enums.HandEval
+    + getHand() : Hand
+    + getHandValue() : int
   }
 
   class GameTable {
     - tableID : String
     - dealer : Dealer
     - players : ArrayList<Player>
-    - shoe : Shoe
     - bets : ArrayList<Bet>
+    - shoe : Shoe
     - state : GameState
-    + GameTable(tableID : String) : void
     + addPlayer(player : Player) : boolean
     + removePlayer(player : Player) : void
-    + startRound() : void
-    + dealInitialCards() : void
+    + startRound() : boolean
+    + DealInitialCards() : void
+    + handlePlayerAction(username : String, action : Enums.PlayerAction) : boolean
     + evaluateHands() : void
+    + resetForNextRound() : void
     + resetTable() : void
-    + broadcastUpdate() : void
+    + createSnapshotFor(requestingPlayerUsername : String) : Shared.TableSnapshot
   }
 
   class Shoe {
-    - decks : ArrayList<Deck>
-    - shoeID : String
-    + Shoe(numDecks : int) : void
-    + shuffleAll() : void
     + dealCard() : Card
-    + cardsRemaining() : int
-    + resetShoe() : void
   }
 
-  class Deck {
-    - cards : ArrayList<Card>
-    - deckID : String
-    + Deck() : void
-    + shuffle() : void
-    + dealCard() : Card
-    + cardsRemaining() : int
-    + resetDeck() : void
-  }
+  class Deck
 
   class Card {
-    - rank : Rank
-    - suit : Suit
-    - value : int
-    + Card(rank : Rank, suit : Suit) : void
-    + getRank() : Rank
-    + getSuit() : Suit
+    + getRank() : Enums.Rank
+    + getSuit() : Enums.Suit
     + getValue() : int
-    + toString() : String
   }
 
   class Bet {
     - amount : double
-    - payoutMultiplier : double
+    - doubled : boolean
+    - outcome : Enums.BetStatus
     - settled : boolean
-    - outcome : String
     - player : Player
-    + Bet(player : Player, amount : double) : void
-    + validateBet() : boolean
-    + settle(result : String) : void
     + calculatePayout() : double
     + isSettled() : boolean
+    + setOutcome(o : Enums.BetStatus) : void
+    + settle(o : Enums.BetStatus) : void
+    + getAmount() : double
+    + getPlayer() : Player
   }
 
-  class Hand {
-    - cards : ArrayList<Card>
-    - isActive : boolean
-    - handValue : int
-    + Hand() : void
+  class Hand <<Serializable>> {
     + addCard(card : Card) : void
-    + getValue() : int
-    + isBust() : boolean
-    + isBlackjack() : boolean
     + clearHand() : void
-    + toString() : String
+    + getValue() : int
+    + getCards() : java.util.List<Card>
   }
 
-  ' ===== Inheritance =====
+  class UserLogger {
+    + log(username : String, action : String) : void
+  }
+
+  ' Relationships
   Account <|-- Player
   Account <|-- Dealer
-
-  ' ===== Server composition / constraints =====
-  Server *-- "1..*" GameTable : manages
-  GameTable "1" o-- "1" Dealer : dealer
-  GameTable "1" o-- "1..7" Player : seated players
-  GameTable "1" *-- "1" Shoe : uses
-  GameTable "1" *-- "*" Bet : manages
-
-  ' ===== Shoe/Deck/Card constraints =====
-  Shoe "1" *-- "7" Deck : contains
-  Deck "1" *-- "52" Card : standard deck
-
-  ' ===== Hand multiplicities =====
-  Player "1" o-- "1..4" Hand : owns (split-capable)
-  Dealer "1" o-- "1" Hand : owns
-  Hand "1" *-- "*" Card : contains
-
-  ' ===== Bet linkage =====
-  Bet "1" --> "1" Player : belongs to
+  GameTable o-- Dealer
+  GameTable o-- Player
+  GameTable *-- Shoe
+  Shoe *-- Deck
+  Deck *-- Card
+  Player o-- Hand
+  Dealer o-- Hand
+  Hand *-- Card
+  Bet --> Player
 }
 
 ' ========= Client Side (UI + networking) =========
-package "Client Side" {
+package "Client" as PK_Client {
   class Client {
-    + connect(serverAddr : String, port : int) : void
-    + sendMessage(msg : Message) : void
-    + receiveMessage() : Message
-    + disconnect() : void
+    + login(u : String, p : String) : boolean
+    + register(u : String, p : String, type : String) : boolean
+    + logout() : void
+    + createTable() : Shared.TableSnapshot
+    + joinTable(id : String) : Shared.TableSnapshot
+    + leaveTable() : void
+    + requestTableState() : Shared.TableSnapshot
+    + placeBet(amount : double) : void
+    + sendPlayerAction(action : Enums.PlayerAction) : Shared.TableSnapshot
+    + startRound() : void
+    + isDealer() : boolean
+    + setGUI(gui : GUI) : void
   }
 
   class GUI {
-    - currentScreen : String
-    - playerDashboard : Object
-    - dealerDashboard : Object
-    + displayLoginScreen() : void
-    + displayLobby() : void
-    + displayTable() : void
-    + updateGameState() : void
-    + showPlayerOptions() : void
-    + showDealerOptions() : void
-    + showAnimations() : void
-    + displayError(message : String) : void
+    + displayTable(snapshot : Shared.TableSnapshot) : void
+    + showLoginScreen() : void
+    + showLobby() : void
+    + setClient(client : Client) : void
   }
 
   class Menu {
-    - scanner : Scanner
-    - options : ArrayList<String>
-    - isRunning : boolean
-    - client : Client
-    - currentScreen : String
-    - userType : String
-    - isLoggedIn : boolean
-    - currentUser : String
-    - menuHistory : Stack<String>
-    + Menu(client : Client) : void
+    + Menu(client : Client)
     + displayMainMenu() : void
-    + displayLoginScreen() : void
-    + displayPlayerLobby() : void
-    + handleSelection(option : int) : void
-    + navigateTo(screen : String) : void
-    + goBack() : void
-    + logout() : void
-    + exitGame() : void
   }
-
-  GUI -down-> Menu
-  Menu -down-> Client
 }
 
 ' ========= Message Class (Shared between Client & Server) =========
+package "Message" as PK_Message {
 class Message <<Serializable>> {
   - messageID : String
   - messageType : MessageType
@@ -284,6 +229,7 @@ class Message <<Serializable>> {
   + getPayload() : Object
   + getTimestamp() : LocalDateTime
 }
+}
 
 
 note right of Message
@@ -292,7 +238,18 @@ Fields set in constructor; getters only.
 end note
 
 ' ========= Network boundary =========
-Client ..> Message : sends/receives >
-Server ..> Message : sends/receives >
-Client ..[#3366cc].> Server : communicates over network
+Client ..> Message : sends/receives
+Server ..> Message : sends/receives
+Client ..[#3366cc].> Server : TCP Socket
+
+' ========= Shared Views =========
+package "Shared" as PK_Shared {
+  class CardView <<Serializable>>
+  class DealerView <<Serializable>>
+  class PlayerView <<Serializable>>
+  class TableSnapshot <<Serializable>>
+}
+PK_Server -down[#transparent]- PK_Client
+PK_Client -down[#transparent]- PK_Message
+PK_Message -down[#transparent]- PK_Shared
 @enduml
