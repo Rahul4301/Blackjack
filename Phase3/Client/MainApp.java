@@ -59,11 +59,9 @@ public class MainApp {
         try {
             Socket socket = new Socket("localhost", port);
 
-            java.io.ObjectOutputStream out =
-                    new java.io.ObjectOutputStream(socket.getOutputStream());
+            java.io.ObjectOutputStream out = new java.io.ObjectOutputStream(socket.getOutputStream());
             out.flush();
-            java.io.ObjectInputStream in =
-                    new java.io.ObjectInputStream(socket.getInputStream());
+            java.io.ObjectInputStream in = new java.io.ObjectInputStream(socket.getInputStream());
 
             System.out.println("Connected to server on port " + port);
 
@@ -75,16 +73,14 @@ public class MainApp {
             client.setGUI(gui);
 
         } catch (Exception e) {
-
-            // If connection fails, demo mode
             JOptionPane.showMessageDialog(
                     null,
                     "Could not connect to server.\nCheck if server is on\n\nError: " + e.getMessage(),
                     "Connection Error",
-                    JOptionPane.WARNING_MESSAGE
+                    JOptionPane.ERROR_MESSAGE
             );
 
-            new GUI(null); // GUI demo mode
+            return;
         }
     }
 }

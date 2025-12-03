@@ -521,32 +521,47 @@ public class GUI {
             if (client != null && client.login(username, password)) {
                 showLobby();  // Go to lobby after successful login
             } else {
-                // For testing without client
-                JOptionPane.showMessageDialog(frame, 
-                    "Login successful (demo mode)", 
-                    "Info", 
-                    JOptionPane.INFORMATION_MESSAGE);
-                showLobby();  // Go to lobby anyway for testing
+                // Invalid login
+                JOptionPane.showMessageDialog(
+                        frame,
+                        "Invalid username or password.",
+                        "Login Failed",
+                        JOptionPane.ERROR_MESSAGE
+                );
+                //clear the password field
+                passField.setText("");
             }
         });
         
         registerBtn.addActionListener(e -> {
-            String username = userField.getText();
-            String password = new String(passField.getPassword());
-            
+            String username = userField.getText().trim();
+            String password = new String(passField.getPassword()).trim();
+
+            if (username.isEmpty() || password.isEmpty()) {
+                JOptionPane.showMessageDialog(
+                        frame,
+                        "Username and password cannot be empty.",
+                        "Registration Error",
+                        JOptionPane.ERROR_MESSAGE
+                );
+                return;
+            }
+
             if (client != null) {
-                // Assuming "PLAYER" as default type
                 if (client.register(username, password, "PLAYER")) {
                     showLobby();
+                } else {
+                    JOptionPane.showMessageDialog(
+                            frame,
+                            "Registration failed.",
+                            "Error",
+                            JOptionPane.ERROR_MESSAGE
+                    );
                 }
-            } else {
-                JOptionPane.showMessageDialog(frame, 
-                    "Registration would happen here", 
-                    "Info", 
-                    JOptionPane.INFORMATION_MESSAGE);
-                showLobby();  // Go to lobby for testing
             }
         });
+
+
         
         loginPanel.add(loginBtn);
         loginPanel.add(registerBtn);
