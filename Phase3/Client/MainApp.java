@@ -36,7 +36,7 @@ public class MainApp {
         if (mode == 1) {
             // ------------------ CONSOLE MODE ------------------
             try {
-                Socket socket = new Socket("localhost", port);
+                Socket socket = new Socket("192.168.56.1", port);
 
                 java.io.ObjectOutputStream out =
                         new java.io.ObjectOutputStream(socket.getOutputStream());
@@ -71,7 +71,7 @@ public class MainApp {
             Client client = new Client(out, in);
 
             // Launch GUI
-            GUI gui = new GUI();
+            GUI gui = new GUI(client);
             client.setGUI(gui);
 
         } catch (Exception e) {
@@ -84,7 +84,7 @@ public class MainApp {
                     JOptionPane.WARNING_MESSAGE
             );
 
-            new GUI(); // GUI demo mode
+            new GUI(null); // GUI demo mode
         }
     }
 }
