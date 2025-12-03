@@ -67,7 +67,7 @@ public class GUI {
         dealerLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         dealerLabel.setFont(dealerLabel.getFont().deriveFont(Font.BOLD, 20f));
 
-        DealerView dealerView = snapshot.getDealer();
+        DealerView dealerView = snapshot.getDealerView();
         JPanel dealerCardsPanel = buildCardsPanel(
                 dealerView != null ? dealerView.getCards() : List.of(),
                 true,
@@ -89,7 +89,7 @@ public class GUI {
         );
 
         // ---- Game state info ----
-        JLabel stateLabel = new JLabel("Status: " + snapshot.getGameState());
+        JLabel stateLabel = new JLabel("Status: " + snapshot.getState());
         stateLabel.setForeground(new Color(255, 255, 100));
         stateLabel.setAlignmentX(Component.CENTER_ALIGNMENT);
         stateLabel.setFont(stateLabel.getFont().deriveFont(Font.PLAIN, 14f));

@@ -703,8 +703,15 @@ public class Server {
         ServerSocket server = null;
         int port = 8080;
 
-        System.out.println("Server starting on IP: " + server.getLocalSocketAddress() + ", Port: " + port);
-
+        // NEW: Correct IP lookup
+        String ip = findLocalIp();
+        System.out.println("======================================");
+        System.out.println("    Blackjack Server Started");
+        System.out.println("    Local IP Address: " + ip);
+        System.out.println("    Port: " + port);
+        System.out.println("    Other players should connect to:");
+        System.out.println("        " + ip + ":" + port);
+        System.out.println("======================================");
         System.out.println("ServerSocket awaiting connections on port " + port + "...");
 
         try {
@@ -735,3 +742,4 @@ public class Server {
 }
 
 
+ 

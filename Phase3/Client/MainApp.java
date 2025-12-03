@@ -71,7 +71,7 @@ public class MainApp {
             Client client = new Client(out, in);
 
             // Launch GUI
-            GUI gui = new GUI(client);
+            GUI gui = new GUI();
             client.setGUI(gui);
 
         } catch (Exception e) {
@@ -84,7 +84,7 @@ public class MainApp {
                     JOptionPane.WARNING_MESSAGE
             );
 
-            new GUI(null); // GUI demo mode
+            new GUI(); // GUI demo mode
         }
     }
 }
