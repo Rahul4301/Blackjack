@@ -222,8 +222,8 @@ public class Client {
             // Server's handleCreateTable sends OK with a TableSnapshot payload
             if (response.getMessageType() == MessageType.OK && payload instanceof TableSnapshot snapshot) {
                 // You can also store it in a field if you want
-                // this.currentTableId = snapshot.getTableId();
-                // this.currentSnapshot = snapshot;
+                this.currentTableId = snapshot.getTableId();
+                this.currentSnapshot = snapshot;
 
                 return snapshot;
             }
@@ -286,10 +286,14 @@ public void leaveTable() {
 
         Message response = (Message) in.readObject();
         System.out.println(response.getPayload());
-        if(response.getMessageType() == MessageType.OK && !currentTableId.isEmpty()){
+
+        if (response.getMessageType() == MessageType.OK) {
+            // We successfully left whatever table the server thinks we were on
             currentTableId = null;
+            currentSnapshot = null;
             return;
         }
+
 
     } catch (IOException | ClassNotFoundException e) {
         System.out.println("Error leaving table: " + e.getMessage());

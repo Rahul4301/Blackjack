@@ -1,5 +1,6 @@
 package Server;
 
+import Enums.GameState;
 import Enums.MessageType;
 import Enums.PlayerAction;
 import Message.Message;
@@ -161,6 +162,11 @@ public class Server {
 
             GameTable table = currentTable;
 
+            // If we are coming from a finished round, reset everything
+            if (table.getState() == GameState.RESULTS) {
+                table.resetForNextRound();
+            }
+
             boolean started = table.startRound();
             if (!started) {
                 sendMessage(createErrorResponse(msg,
@@ -169,8 +175,6 @@ public class Server {
             }
 
             TableSnapshot snapshot = table.createSnapshotFor(null);
-
-            // Send a direct response the dealer's client.startRound() is waiting for.
             sendMessage(createOKResponse(msg, snapshot));
         }
 
@@ -363,6 +367,8 @@ public class Server {
                 return;
             }
 
+            player.resetForNewRound();
+
             if (!(msg.getPayload() instanceof String)) {
                 sendMessage(createErrorResponse(msg, "Expected table ID as payload"));
                 return;
@@ -423,10 +429,16 @@ public class Server {
 
             if (account instanceof Player player) {
                 table.removePlayer(player);
+                player.resetForNewRound();
                 System.out.println("[Server] Player " + player.getUsername() + " left table " + tableId);
             } else if (account instanceof Dealer dealer) {
                 // Dealer leaves - for now, just log it
                 System.out.println("[Server] Dealer " + dealer.getUsername() + " detached from table " + tableId);
+            }
+            
+            // If the round is in RESULTS state, wipe the dealer hand
+            if (table.getState() == GameState.RESULTS) {
+                table.getDealer().getHand().clearHand();
             }
 
             currentTable = null;
@@ -693,7 +705,7 @@ public class Server {
     return "127.0.0.1";
 }
 
-       public static void main(String[] args) {
+    public static void main(String[] args) {
         manager = new LoginManager();
         System.out.println("Loading user data...");
         manager.loadData();

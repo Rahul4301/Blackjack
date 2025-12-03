@@ -36,6 +36,13 @@ public class Player extends Account {
         // no-op for now; action handled elsewhere
     }
 
+    public void resetForNewRound() {
+        if (hand != null) {
+            hand.clearHand();
+        }
+        activeBet = null;
+    }
+
     public void updateBalance(double amount){
         this.balance += amount;
     }

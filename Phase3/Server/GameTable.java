@@ -256,8 +256,7 @@ public class GameTable {
 
     public void resetForNextRound(){
         for (Player player : players){
-            player.getHand().clearHand();
-            player.placeBet(0);
+            player.resetForNewRound();
         }
 
         dealer.getHand().clearHand();
@@ -393,6 +392,11 @@ public class GameTable {
                 cardViews,
                 player.getBalance()
         );
+    }
+
+
+    public GameState getState() {
+        return state;
     }
 
 
