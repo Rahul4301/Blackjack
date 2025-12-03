@@ -665,17 +665,8 @@ public class Server {
             sendMessage(createOKResponse(msg, ids));
         }
 
-
-        public Account getAccount() {
-            return account;
-        }
-
         public String getClientID() {
             return clientID;
-        }
-
-        public boolean isConnected() {
-            return connected;
         }
 
         private void cleanup() {
