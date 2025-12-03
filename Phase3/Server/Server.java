@@ -238,6 +238,13 @@ public class Server {
                 return;
             }
 
+            // 3b. Enforce max 1000 per transaction
+            if (deposit > 1000) {
+                sendMessage(createErrorResponse(msg, "Deposit amount must not exceed 1000 per transaction"));
+                return;
+            }
+
+
             // 4. Apply deposit to the account
             // Replace "account" with however you track accounts
             // Example:

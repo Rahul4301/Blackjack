@@ -285,7 +285,7 @@ public class GUI {
         rootPanel.add(controlRow);
 
         // ======================================================================
-        // >>> PLAYER ACTION BUTTONS (Hit, Stand, Double, Bet) <<<
+        // >>> PLAYER ACTION BUTTONS (Hit, Stand, Double, Bet) and Deposit<<<
         // ======================================================================
         JPanel playerActions = new JPanel();
         playerActions.setOpaque(false);
@@ -294,12 +294,14 @@ public class GUI {
         JButton standBtn = new JButton("Stand");
         JButton doubleBtn = new JButton("Double");
         JButton betBtn = new JButton("Bet");
+        JButton depositBtn = new JButton("Deposit");
 
         // Add to panel
         playerActions.add(hitBtn);
         playerActions.add(standBtn);
         playerActions.add(doubleBtn);
         playerActions.add(betBtn);
+        playerActions.add(depositBtn);
 
         // Add panel to GUI
         rootPanel.add(Box.createVerticalStrut(15));
@@ -348,6 +350,64 @@ public class GUI {
                 JOptionPane.showMessageDialog(frame, "Invalid bet");
             }
         });
+
+        depositBtn.addActionListener(e -> {
+            if (client == null) {
+                JOptionPane.showMessageDialog(frame, "No client attached.");
+                return;
+            }
+
+            // Use the current snapshot to find "you" and get up to date balance
+            PlayerView you = findYou(snapshot.getPlayers());
+            double currentBalance = (you != null) ? you.getBalance() : 0.0;
+
+            String prompt =
+                    "Your current balance: $" + currentBalance + "\n" +
+                    "Enter deposit amount (max 1000):";
+
+            String input = JOptionPane.showInputDialog(
+                    frame,
+                    prompt,
+                    "Deposit",
+                    JOptionPane.QUESTION_MESSAGE
+            );
+
+            if (input == null) {
+                // User cancelled
+                return;
+            }
+
+            double amount;
+            try {
+                amount = Double.parseDouble(input);
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(frame, "Invalid amount.");
+                return;
+            }
+
+            if (amount <= 0) {
+                JOptionPane.showMessageDialog(frame, "Amount must be greater than zero.");
+                return;
+            }
+
+            if (amount > 1000) {
+                JOptionPane.showMessageDialog(frame, "Maximum deposit is 1000 per transaction.");
+                return;
+            }
+
+            boolean ok = client.deposit(amount);
+            if (ok) {
+                // Ask server for current table state so balance updates on screen
+                TableSnapshot updated = client.requestTableState();
+                if (updated != null) {
+                    displayTable(updated);
+                }
+                JOptionPane.showMessageDialog(frame, "Deposit successful: $" + amount);
+            } else {
+                JOptionPane.showMessageDialog(frame, "Deposit failed. See console for details.");
+            }
+        });
+
 
         // ======================================================================
         // >>> DEALER ACTION BUTTON (Start Round) — ONLY IF THIS USER IS DEALER <<<

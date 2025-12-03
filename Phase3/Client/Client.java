@@ -174,26 +174,75 @@ public class Client {
     }
 
     public void sendExit() {
+            try {
+                Message exitMsg = new Message(
+                        UUID.randomUUID().toString(),
+                        MessageType.EXIT,
+                        clientUUID,
+                        "SERVER",
+                        null,
+                        LocalDateTime.now()
+                );
+
+                out.writeObject(exitMsg);
+                out.flush();
+
+                Message response = (Message) in.readObject();
+                System.out.println(response.toString());
+
+            } catch (IOException | ClassNotFoundException e) {
+                System.out.println("Error sending EXIT: " + e.getMessage());
+            }
+        }
+
+        public boolean deposit(double amount) {
+        if (!isLoggedIn()) {
+            System.out.println("Must be logged in to deposit");
+            return false;
+        }
+
         try {
-            Message exitMsg = new Message(
+            // Server expects a String payload for DEPOSIT
+            String payload = Double.toString(amount);
+
+            Message depositMsg = new Message(
                     UUID.randomUUID().toString(),
-                    MessageType.EXIT,
+                    MessageType.DEPOSIT,
                     clientUUID,
                     "SERVER",
-                    null,
+                    payload,
                     LocalDateTime.now()
             );
 
-            out.writeObject(exitMsg);
+            out.writeObject(depositMsg);
             out.flush();
 
             Message response = (Message) in.readObject();
-            System.out.println(response.toString());
+
+            if (response.getMessageType() == MessageType.OK) {
+                System.out.println("Deposit OK: " + response.getPayload());
+
+                // Optional: refresh table state so GUI can show new balance
+                if (currentTableId != null) {
+                    requestTableState();
+                }
+                return true;
+
+            } else if (response.getMessageType() == MessageType.ERROR) {
+                System.out.println("Deposit error: " + response.getPayload());
+                return false;
+
+            } else {
+                System.out.println("Unexpected response to DEPOSIT: " + response);
+                return false;
+            }
 
         } catch (IOException | ClassNotFoundException e) {
-            System.out.println("Error sending EXIT: " + e.getMessage());
+            System.out.println("Error during deposit: " + e.getMessage());
+            return false;
         }
     }
+
 
 
     //Table Messages
@@ -411,13 +460,11 @@ public void leaveTable() {
 
 
 
-    //Snapshot helpers
 
     public void handleTableSnapshot(TableSnapshot snapshot) {
         this.currentSnapshot = snapshot;
         this.currentTableId = snapshot.getTableId();
 
-        // For now, just print a simple view
         displaySnapshot(snapshot);
     }
 
