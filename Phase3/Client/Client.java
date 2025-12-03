@@ -49,6 +49,9 @@ public class Client {
     }
     public void setGUI(GUI gui) {
         this.gui = gui;
+        if (gui != null) {
+            gui.setClient(this);
+        }
     }
 
     public GUI getGUI() {
