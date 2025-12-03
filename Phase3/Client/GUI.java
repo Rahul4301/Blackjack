@@ -163,41 +163,63 @@ public class GUI {
 
             // When we first enter RESULTS, show win / lose and restart round
             if (snapshot.getState() == GameState.RESULTS
-                    && lastState != GameState.RESULTS
-                    && you != null
-                    && balanceBeforeRound != null) {
+                    && lastState != GameState.RESULTS) {
 
-                double balanceAfter = you.getBalance();
-                double diff = balanceAfter - balanceBeforeRound;
-
-                String title = "Round Over";
+                double after = you.getBalance();
                 String message;
 
-                if (diff > 0.0001) {
-                    double roundedDiff = Math.round(diff * 100.0) / 100.0;
-                    message = "You WIN!\nChange: +$" + roundedDiff
-                            + "\nBefore: $" + balanceBeforeRound
-                            + "\nAfter:  $" + balanceAfter;
-                } else if (diff < -0.0001) {
-                    double roundedDiff = Math.round((-diff) * 100.0) / 100.0;
-                    message = "You LOSE.\nChange: -$" + roundedDiff
-                            + "\nBefore: $" + balanceBeforeRound
-                            + "\nAfter:  $" + balanceAfter;
+                if (balanceBeforeRound != null) {
+                    if (after > balanceBeforeRound) {
+                        message = "You WIN!\n"
+                                + "Before: " + balanceBeforeRound + "\n"
+                                + "After: " + after;
+                    } else if (after < balanceBeforeRound) {
+                        message = "You LOSE.\n"
+                                + "Before: " + balanceBeforeRound + "\n"
+                                + "After: " + after;
+                    } else {
+                        message = "Push. No net change.\n"
+                                + "Balance: " + after;
+                    }
                 } else {
-                    message = "Push (no net change).\n"
-                            + "Balance: $" + balanceAfter;
+                    message = "Round complete.\nYour balance: " + after;
                 }
+
+                // >>> NEW: append dealer and player hand summaries <<<
+                dealerView = snapshot.getDealerView();
+                String dealerLine = buildHandSummary(
+                        "Dealer",
+                        dealerView != null ? dealerView.getCards() : null
+                );
+                String playerLine = buildHandSummary(
+                        "You",
+                        you.getCards()
+                );
+
+                if (dealerLine != null || playerLine != null) {
+                    StringBuilder sb = new StringBuilder(message);
+                    sb.append("\n\n");
+                    if (dealerLine != null) {
+                        sb.append(dealerLine).append("\n");
+                    }
+                    if (playerLine != null) {
+                        sb.append(playerLine);
+                    }
+                    message = sb.toString();
+                }
+                // <<< END NEW >>>
 
                 JOptionPane.showMessageDialog(
                         frame,
                         message,
-                        title,
+                        "Round Over",
                         JOptionPane.INFORMATION_MESSAGE
                 );
 
-                // Prepare for next round on the client
-                balanceBeforeRound = balanceAfter;
+                // Prepare for next round
+                balanceBeforeRound = after;
             }
+
 
             // Update lastState so we only trigger once per RESULTS entry
             lastState = snapshot.getState();
@@ -704,62 +726,93 @@ public class GUI {
         rootPanel.repaint();
     }
 
-    private void maybeShowRoundResult(TableSnapshot snapshot, boolean localIsDealer) {
-        // Only show this for players, not the dealer
-        if (localIsDealer) {
-            lastState = snapshot.getState();
-            return;
+        //Helper for win / lose hand visibility
+    private String buildHandSummary(String who, List<CardView> cards) {
+        if (cards == null || cards.isEmpty()) {
+            return null;
         }
 
-        PlayerView you = findYou(snapshot.getPlayers());
-        if (you == null) {
-            lastState = snapshot.getState();
-            return;
-        }
+        // Skip hidden cards when computing and formatting
+        int total = computeHandValue(cards);
+        StringBuilder handStr = new StringBuilder();
+        boolean first = true;
 
-        // While in BETTING, remember balance before the round
-        if (snapshot.getState() == GameState.BETTING) {
-            if (balanceBeforeRound == null) {
-                balanceBeforeRound = you.getBalance();
+        for (CardView card : cards) {
+            if (card.isHidden()) {
+                continue;
             }
-        }
-
-        // When we first enter RESULTS, show a result popup
-        if (snapshot.getState() == GameState.RESULTS
-                && lastState != GameState.RESULTS) {
-
-            double after = you.getBalance();
-            String message;
-
-            if (balanceBeforeRound != null) {
-                if (after > balanceBeforeRound) {
-                    message = "You WIN!\n"
-                            + "Before: " + balanceBeforeRound + "\n"
-                            + "After: " + after;
-                } else if (after < balanceBeforeRound) {
-                    message = "You LOSE.\n"
-                            + "Before: " + balanceBeforeRound + "\n"
-                            + "After: " + after;
-                } else {
-                    message = "Push. No net change.\n"
-                            + "Balance: " + after;
-                }
+            if (!first) {
+                handStr.append(" ");
             } else {
-                message = "Round complete.\nYour balance: " + after;
+                first = false;
             }
-
-            JOptionPane.showMessageDialog(
-                    frame,
-                    message,
-                    "Round Over",
-                    JOptionPane.INFORMATION_MESSAGE
-            );
-
-            // Prepare for next round
-            balanceBeforeRound = after;
+            handStr.append(rankToString(card.getRank()))
+                .append(suitToSymbol(card.getSuit()));
         }
 
-        lastState = snapshot.getState();
+        if (handStr.length() == 0) {
+            return null;
+        }
+
+        return who + " had " + total + " (" + handStr + ")";
+    }
+
+    // Standard blackjack total with aces as 1 or 11
+    private int computeHandValue(List<CardView> cards) {
+        int total = 0;
+        int aces = 0;
+
+        for (CardView card : cards) {
+            if (card.isHidden()) {
+                continue;
+            }
+
+            Rank r = card.getRank();
+            switch (r) {
+                case TWO:
+                    total += 2;
+                    break;
+                case THREE:
+                    total += 3;
+                    break;
+                case FOUR:
+                    total += 4;
+                    break;
+                case FIVE:
+                    total += 5;
+                    break;
+                case SIX:
+                    total += 6;
+                    break;
+                case SEVEN:
+                    total += 7;
+                    break;
+                case EIGHT:
+                    total += 8;
+                    break;
+                case NINE:
+                    total += 9;
+                    break;
+                case TEN:
+                case JACK:
+                case QUEEN:
+                case KING:
+                    total += 10;
+                    break;
+                case ACE:
+                    total += 11;
+                    aces++;
+                    break;
+            }
+        }
+
+        // Downgrade aces from 11 to 1 while over 21
+        while (total > 21 && aces > 0) {
+            total -= 10;
+            aces--;
+        }
+
+        return total;
     }
 
 
